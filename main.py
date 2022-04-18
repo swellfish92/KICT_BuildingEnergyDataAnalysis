@@ -6,7 +6,10 @@ from csv_read import *
 from db_read import *
 
 # 데이터 읽어오기 (from DB)
-data = get_fulldata()
+# data = get_fulldata()
+
+# 데이터 읽어오기 (2022.03.24버전)
+data = get_certain_data('Carbon', 'sum_divarea')
 
 # 특정용도 데이터 출력부분(주석처리)
 '''data_for_save = data[(data['MAIN_PURPS_NM'] == '업무시설')]
@@ -20,9 +23,17 @@ time.sleep(100)'''
 final_data = data[['USEAPR_DAY', 'MAIN_PURPS_NM', 'total_converged_EUI']]
 print(final_data)
 
-# 값 100이하, 2000 초과치를 제거함(극단치로 인해 정규분포 에러가 튀는 것을 막음)
-final_data = final_data[(final_data['total_converged_EUI'] <= 2000) & (final_data['total_converged_EUI'] > 100)]
-print(final_data['total_converged_EUI'])
+# 값 100이하, 2000 초과치를 제거함(극단치로 인해 정규분포 에러가 튀는 것을 막음) << 2022.03.24: 상하위 5% 쳐내는 것으로 변경
+# final_data = final_data[(final_data['total_converged_EUI'] <= 2000) & (final_data['total_converged_EUI'] > 100)]
+print('value for top_5% percentile is as below:')
+print(final_data['total_converged_EUI'].quantile(q=0.95, interpolation='nearest'))
+print('value for bottom_5% percentile is as below:')
+print(final_data['total_converged_EUI'].quantile(q=0.05, interpolation='nearest'))
+final_data = final_data[(final_data['total_converged_EUI'] <= final_data['total_converged_EUI'].quantile(q=0.95, interpolation='nearest')) & (final_data['total_converged_EUI'] > final_data['total_converged_EUI'].quantile(q=0.05, interpolation='nearest'))]
+print(final_data)
+
+# 너무 느리니 여기서 1차 백업. 이 코드는 사후 삭제 03.24
+final_data.to_excel('temp_save.csv', encoding='utf-8')
 
 # sort_list를 작성하는 방법들임
 # 1. 건물용도에서 중복을 제거한 리스트 (전체)
@@ -44,13 +55,17 @@ print('=========================================================================
 # draw_final_graph: 개별 PDF, CDF 그래프를 출력하며, point 인자로 사전 설정된 PK코드를 조회해 해당 위치에 Line을 출력함
 # ==============================================================================================
 
+distribute_plot(data, 'total_converged_EUI', type='hist')
+plt.clf()
+
 # Case 1. 비교 그래프 출력
 # 직관성을 위해 공정 2단계를 별개로 main함수에 기술함
+
 # 1. fit_matrix로 건물용도별 최적분포함수 종류를 호출
-fit_matrix = get_fit_matrix(sort='excluded')
+#fit_matrix = get_fit_matrix(sort='excluded')
 
 # 2. 해당 매트릭스를 인자로 비교함수를 호출
-plot_fitting_comparison(fit_matrix, data, show=True, save=False, second_label='')
+#plot_fitting_comparison(fit_matrix, data, show=True, save=False, second_label='')
 
 
 # Case 2. 전체 그래프 플로팅

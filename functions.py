@@ -4,12 +4,17 @@ import scipy as sp
 from fitter import Fitter, get_common_distributions, get_distributions
 import matplotlib.pyplot as plt
 import propagate
+import pandas as pd
 
 # 한글 폰트 사용을 위해서 세팅
 from matplotlib import font_manager, rc
 font_path = "C:/Windows/Fonts/NGULIM.TTF"
 font = font_manager.FontProperties(fname=font_path).get_name()
 rc('font', family=font)
+
+
+
+
 
 # 중복을 제거한 배열을 반환함
 def remove_duplicated(list):
@@ -38,14 +43,17 @@ def distribute_plot(data, label, type='both'):
         plt.show()
     elif type == 'hist':
         sns.displot(data[label], kde=False)
+        plt.show()
     elif type == 'kde':
         sns.displot(data[label], hist=False)
+        plt.show()
     else:
         print('invalid type. please use one of |both|hist|kde|')
 
 def data_fitting(data, label):
 
     data_for_fit = data[label].values
+    print(data_for_fit)
     '''print(get_common_distributions())
     f = Fitter(data_for_fit, distributions=get_common_distributions())
     f.fit()
@@ -199,6 +207,7 @@ def draw_final_graph(data, label, dist_res, pdf_sort, title='default_title', sho
     if point == True:
         # 지정된 건물을 표기
         # PK-code 11140-185 건물(서소문청사)
+        print(data)
         PK = '11140-185'
         highlight_data = data.iloc[data.index.tolist().index('11140-185')]  #PK변수로 줄 경우 pandas에서 에러가 발생하여, 부득이하게 하드코딩함.
         print('Result for ' + str(PK))
@@ -209,10 +218,10 @@ def draw_final_graph(data, label, dist_res, pdf_sort, title='default_title', sho
         #percentile = sp.stats.rv_continuous.expect(distribution, lb=highlight_data['total_converged_EUI'], ub=2000)
         percentile = distribution.pdf(highlight_data['total_converged_EUI'])
         print(percentile)
-        plt.text(highlight_data['total_converged_EUI'], 0.001, ' ' + str(round(percentile, 4)*100) + ' % (probability)', fontsize=10)
+        plt.text(highlight_data['total_converged_EUI'], 0.01, ' ' + str(round(percentile, 4)*100)[0:5] + ' % (probability)', fontsize=10)
 
     # 배경 히스토그램
-    plt.hist(data_for_fit, bins=100, range=(0, 2000), density=True, color='lightgrey')
+    plt.hist(data_for_fit, bins=100, range=(min(data_for_fit), max(data_for_fit)), density=True, color='lightgrey')
 
     # 최종 출력
     plt.legend()
