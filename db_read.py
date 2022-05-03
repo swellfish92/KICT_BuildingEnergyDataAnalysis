@@ -29,9 +29,11 @@ def load_sql(cursor, load_query):
 # df_1에 null이 있을 경우 df_2에서 가져와서 채움. null이 없으면 기본적으로 앞의 것을 신뢰함.
 def fill_null(df_1, df_2, col_arr):
     fill_null_condition = lambda s1, s2: s2 if pd.isna(s1) is True else s1
-    print(col_arr)
-    print(df_1.columns.tolist())
-    print(df_2.columns.tolist())
+    # print(col_arr)
+    # print(df_1)
+    # print(df_1.columns.tolist())
+    # print(df_2)
+    # print(df_2.columns.tolist())
     for index in col_arr:
         df_1[index] = df_1[index].combine(df_2[index], fill_null_condition)
     return df_1
@@ -91,14 +93,20 @@ def get_coefficient_string(energy_sort, calc_type):
             'HEAT': '*0.728*0.2778' # 1 MJ/m^2 = 0.2778 kWh/m2\^2
         },
         'Carbon':{              # 탄소배출량 단위는 Kg으로 통일했음.
-            'ELEC': '*0.4594',  #0.4594 t*CO2eq/MWh = 0.4594 kg*CO2eq/kWh    **for reference: https://tips.energy.or.kr/diagnosis/qna_view.do?no=1796
-            'GAS': '*0.056100', #56,100 kg*CO2eq/TJ = 0.056100 Kg*CO2eq/MJ  (1MJ = 10^-6 TJ)
-            'HEAT': '*0.034771' #34,771 kg*CO2eq/TJ = 0.034771 Kg*CO2eq/MJ  (1MJ = 10^-6 TJ)
+            'ELEC': '*0.4598',  #0.4594 t*CO2eq/MWh = 0.4594 kg*CO2eq/kWh    **for reference: https://tips.energy.or.kr/diagnosis/qna_view.do?no=1796
+            'GAS': '*0.056236', #56,100 kg*CO2eq/TJ = 0.056100 Kg*CO2eq/MJ  (1MJ = 10^-6 TJ)
+            'HEAT': '*0.02928' #34,771 kg*CO2eq/TJ = 0.034771 Kg*CO2eq/MJ  (1MJ = 10^-6 TJ)
         },
         'raw': {
             'ELEC': '*1',
             'GAS': '*1',
             'HEAT': '*1'
+        },
+        'toe': {
+            # 한국부동산원 기준계수로 데이터를 수정했음. '환산계수.xlsx'을 참조.
+            'ELEC': '*0.000086',
+            'GAS': '*0.00002388459',    #에너지원별로 toe의 환산계수가 다른데, 이를 맨 마지막에 곱하는 것 같음. 기타가 1.000이니 일단은 단위환산만 해 둔다.
+            'HEAT': '*0.00002388459'    #(1toe = 10Gcal) 1MJ = 0.2778 kWh = 0.2778/1162.22 Gcal = 0.000239 Gcal = 0.0000239 toe
         }
     }
     return coeff_dict[calc_type][energy_sort]
@@ -186,9 +194,9 @@ def get_year_data_multi(energy_sort, year_arr, calc_type, data_type = 'sum', inc
     # 배열의 데이터프레임을 MGM_BLD_PK 기준으로 병합. MGM_BLD_PK외에 다른 데이터는 중복되는 것이 없도록 저장했으므로, 저장할 column은 따로 정하지 않는다.
     for item in temp_result:
         attr_data = attr_data.merge(item, how='outer', left_index=True, right_index=True)
-        print(attr_data.columns.tolist())
+        #print(attr_data.columns.tolist())
     result = attr_data
-
+    print(result.columns.tolist())
     # data_type을 따라서 데이터 값을 처리함
     # sum: 12개월치의 총합 (면적고려X)
     # sum_divarea: 12개월치의 단위면적당 총합
@@ -228,6 +236,9 @@ def read_and_export_excel(calc_type, data_type):
     result = heat_data
     result = result.join(elec_data, how='outer')
     result = result.join(gas_data, how='outer')
+    print(elec_attr)
+    print(elec_attr.columns.tolist())
+    print(result.columns.tolist())
     result = fill_null(result, elec_attr, elec_attr.columns.tolist())
     result = fill_null(result, gas_attr, gas_attr.columns.tolist())
 
@@ -239,16 +250,261 @@ def read_and_export_excel(calc_type, data_type):
     print(result)
 
     # 대충 이게 4분쯤 걸림.
-    result.to_excel('result(' + str(calc_type) + '_' + str(data_type) + ')_v3.xlsx')
+    result.to_excel('result(' + str(calc_type) + '_' + str(data_type) + ')_v6_20220425.xlsx')
 
     print('Finished!')
 
+def read_dbdata_dataframe(calc_type, data_type):
+    # 통합파일 출력과 같으나, 파일로 저장하는게 아니고 데이터프레임을 반환함.
+    heat_data = get_year_data_multi('HEAT', ['2014', '2015', '2016', '2017', '2018', '2019', '2020'], calc_type, data_type=data_type)
+    elec_data = get_year_data_multi('ELEC', ['2014', '2015', '2016', '2017', '2018', '2019', '2020'], calc_type, data_type=data_type, include_attr=False)
+    gas_data = get_year_data_multi('GAS', ['2014', '2015', '2016', '2017', '2018', '2019', '2020'], calc_type, data_type=data_type, include_attr=False)
+    elec_attr = get_attr_data_only("ELEC")
+    gas_attr = get_attr_data_only("GAS")
 
+    result = heat_data
+    result = result.join(elec_data, how='outer')
+    result = result.join(gas_data, how='outer')
+    result = fill_null(result, elec_attr, elec_attr.columns.tolist())
+    result = fill_null(result, gas_attr, gas_attr.columns.tolist())
 
-read_and_export_excel('EUI', 'sum_divarea')
-#read_and_export_excel('EUI', 'sum')
-read_and_export_excel('Carbon', 'sum_divarea')
-#read_and_export_excel('Carbon', 'sum')
+    # inf(TOTAREA가 0인 경우)를 제거함.
+    result[get_energy_data_col(result)].replace(np.inf,0)
+    result[get_energy_data_col(result)].replace(-1*np.inf, 0)
+    # 이게 작동을 안 해서 일단 수동으로 때웠음...... (엑셀 Ctrl+R)
+
+    return result
+
+def distribute_plot_mod(data, label, label_word):#, figure, type='both'):
+    k = 20000000
+    print(k)
+    x_range = []
+    for i in range(0, 200):
+        x_range.append(i*k/200)
+    temp_data = data[(data['BLDG_AGE'] < 12) & (data['BLDG_AGE'] >= 0)]
+    plt.hist(temp_data[label], alpha = 0.5, bins = x_range, histtype='step', label = '2010~')
+    temp_data = data[(data['BLDG_AGE'] < 22) & (data['BLDG_AGE'] >= 12)]
+    plt.hist(temp_data[label], alpha = 0.5, bins = x_range, histtype='step', label = '2000~2009')
+    temp_data = data[(data['BLDG_AGE'] < 32) & (data['BLDG_AGE'] >= 22)]
+    plt.hist(temp_data[label], alpha = 0.5, bins = x_range, histtype='step', label = '1990~1999')
+    temp_data = data[(data['BLDG_AGE'] < 42) & (data['BLDG_AGE'] >= 32)]
+    plt.hist(temp_data[label], alpha = 0.5, bins = x_range, histtype='step', label = '1980~1989')
+    temp_data = data[(data['BLDG_AGE'] < 52) & (data['BLDG_AGE'] >= 42)]
+    plt.hist(temp_data[label], alpha = 0.5, bins = x_range, histtype='step', label = '1970~1979')
+    temp_data = data[(data['BLDG_AGE'] < 62) & (data['BLDG_AGE'] >= 52)]
+    plt.hist(temp_data[label], alpha = 0.5, bins = x_range, histtype='step', label = '1960~1969')
+    temp_data = data[(data['BLDG_AGE'] < 72) & (data['BLDG_AGE'] >= 62)]
+    plt.hist(temp_data[label], alpha = 0.5, bins = x_range, histtype='step', label = '1950~1959')
+    temp_data = data[(data['BLDG_AGE'] < 82)]
+    plt.hist(temp_data[label], alpha = 0.5, bins = x_range, histtype='step', label = '~1949')
+
+    plt.xlim([0, 20000000])
+    plt.ylim([0, 5000])
+    plt.title(label_word)
+    plt.legend()
+    plt.show()
+    plt.clf()
+
+    # data[label].plot(kind='kde')
+
+    # # 범위 설정. 데이터의 최소-최대 값 기준에 resolution은 10000.
+    # resolution = 1000
+    # data_for_fit = data[label].values
+    # #x_range = np.linspace(min(data_for_fit), max(data_for_fit), resolution)
+    # x_range = []
+    # print(x_range)
+    # #div = 0.01
+    # k = max(data_for_fit)
+    # print(k)
+    # for i in range(0, resolution):
+    #     x_range.append(i*k/resolution)
+    # print(x_range)
+    # plt.xlim(0, max(data_for_fit))
+    # temp = figure.add_subplot(1, 1, 1)
+    # if type == 'both':
+    #     temp = sns.distplot(data[label], bins=x_range)
+    #     # plt.show()
+    # elif type == 'hist':
+    #     temp = sns.displot(data[label], kde=False, bins=x_range)
+    #     # plt.show()
+    # elif type == 'kde':
+    #     temp = sns.displot(data[label], kind='kde')
+    #     # plt.show()
+    # else:
+    #     print('invalid type. please use one of |both|hist|kde|')
+
+def remove_percentile(percentile, dataframe, label):
+    modded_dataframe = dataframe[(dataframe[label] <= dataframe[label].quantile(q=1-percentile, interpolation='nearest')) & (dataframe[label] > dataframe[label].quantile(q=percentile, interpolation='nearest'))]
+    return modded_dataframe
+
+def drop_extreme(data, label):
+    # 아웃소스: 나중에 체크할 것
+    # s_ol_data = pd.Series(ol_data)
+    level_1q = data[label].quantile(0.25)
+    level_3q = data[label].quantile(0.75)
+    IQR = level_3q - level_1q
+    rev_range = 3  # 제거 범위 조절 변수
+    return data[(data[label] <= level_3q + (rev_range * IQR)) & (data[label] >= data[label] - (rev_range * IQR))]
+
+def draw_histogram(data, label, resolution, hist_type, label_name):
+    # 극단값을 쳐내고 그것을 기반으로 배열을 작성
+    # histtype 백업: 'bar', 'barstacked', 'step', 'stepfilled'
+    dropped_data = drop_extreme(data, label)
+    data_for_fit = dropped_data[label].values
+    x_range = []
+    for i in range(0, resolution):
+        x_range.append(i*max(data_for_fit)/resolution)
+    plt.hist(data[label], alpha=0.5, bins=x_range, histtype=hist_type, label=label_name)
+
+#
+# read_and_export_excel('EUI', 'sum_divarea')
+# read_and_export_excel('EUI', 'sum')
+# read_and_export_excel('Carbon', 'sum_divarea')
+# read_and_export_excel('Carbon', 'sum')
+# read_and_export_excel('toe', 'sum')
+# read_and_export_excel('toe', 'sum_divarea')
+# read_and_export_excel('raw', 'sum')
+# read_and_export_excel('raw', 'sum_divarea')
+# print('파일저장 완료')
+# import time
+# time.sleep(1000)
+# #read_and_export_excel('Carbon', 'sum')
+#
+# # 2022.04.22 탄소로 뽑고 toe계산해서 붙이기
+# #data = read_dbdata_dataframe('Carbon', 'sum')
+#
+# # data['toe_heat_2020'] = data['HEAT_converged_Carbon_sum_2020']*498.4762734
+# # data['toe_elec_2020'] = data['ELEC_converged_Carbon_sum_2020']*0.000426025
+# # data['toe_gas_2020'] = data['GAS_converged_Carbon_sum_2020']*0.000687354
+# # data['toe_total_2020'] = data['toe_heat_2020'] + data['toe_elec_2020'] + data['toe_gas_2020']
+# # data.to_excel('result(Carbon_sum)_2020toe_added.xlsx')
+#
+#
+#
+#
+# # data = pd.read_excel('result(Carbon_sum)_2020toe_added.xlsx')
+#
+# '''# 긴급. DB에 넣을 시간이 없어 때워야 한다.
+# # xlsx 3개를 읽어와서 사용승인일과 PK코드만 분리
+# heat_pk_data = pd.read_excel('DB_INPUT/HEAT_2004_2109.xlsx')
+# elec_pk_data = pd.read_excel('DB_INPUT/ELEC_2004_2109.xlsx')
+# gas_pk_data = pd.read_excel('DB_INPUT/GAS_2004_2109.xlsx')
+#
+# # PK코드와 사용승인일만 남김
+# heat_pk_data = heat_pk_data[['MGM_BLD_PK', 'USEAPR_DAY']]
+# elec_pk_data = elec_pk_data[['MGM_BLD_PK', 'USEAPR_DAY']]
+# gas_pk_data = gas_pk_data[['MGM_BLD_PK', 'USEAPR_DAY']]
+#
+# # 합쳐서 PK코드 데이터를 만듬
+# heat_pk_data.set_index('MGM_BLD_PK', drop=True, inplace=True)
+# elec_pk_data.set_index('MGM_BLD_PK', drop=True, inplace=True)
+# gas_pk_data.set_index('MGM_BLD_PK', drop=True, inplace=True)
+#
+# # 병합을 위한 코드를 추가 작성해야 할 것임.
+# heat_pk_data.join(elec_pk_data, how='outer', rsuffix='_elec')
+# heat_pk_data.join(gas_pk_data, how='outer', rsuffix='_gas')
+#
+# import math
+# bldg_age_data = heat_pk_data.dropna()    #NaN값 (사용승인일 데이터가 없는 것)을 날림
+# #bldg_age_data['BLDG_AGE'] = 2022 - math.floor(bldg_age_data['USEAPR_DAY']/10000)    #맨앞 4자리(연도)만 뺀 뒤 이걸로 나이를 구함
+# bldg_age_data.to_excel('building_agedata.xlsx')'''
+#
+# # bldg_age_data = pd.read_excel('building_agedata.xlsx')
+# #
+# # bldg_age_data.set_index('MGM_BLD_PK', drop=True, inplace=True)
+# #
+# # data.set_index('MGM_BLD_PK', drop=True, inplace=True)
+# # print(bldg_age_data)
+# # data.join(bldg_age_data, how='left')
+#
+# # 여기부터는 그래프를 그리는 부분
+# # data.to_excel('건물연령 합한 데이터.xlsx')
+# data = pd.read_excel('building_data_including_age.xlsx')
+# data.set_index('MGM_BLD_PK', drop=True, inplace=True)
+# print(data)
+#
+#
+# # 필터-toe 2천 이상.
+# #filtered_data = data[data['toe_total_2020'] >= 2000]
+# #filtered_data.set_index('MGM_BLD_PK', drop=True, inplace=True)
+# #filtered_data.join(bldg_age_data, how='left')
+# #filtered_data.to_excel('toe2000cut.xlsx')
+# #fig = plt.figure()
+# filtered_data = data
+# # filtered_data_mod = filtered_data[(filtered_data['TOTAREA'] < 100) & (filtered_data['TOTAREA'] >= 0)]
+# # distribute_plot_mod(filtered_data_mod, 'energy_total_2020', '0~100')
+# # filtered_data_mod = filtered_data[(filtered_data['TOTAREA'] < 500) & (filtered_data['TOTAREA'] >= 100)]
+# # distribute_plot_mod(filtered_data_mod, 'energy_total_2020', '100~500')
+# # filtered_data_mod = filtered_data[(filtered_data['TOTAREA'] < 1000) & (filtered_data['TOTAREA'] >= 500)]
+# # distribute_plot_mod(filtered_data_mod, 'energy_total_2020', '500~1000')
+# # filtered_data_mod = filtered_data[(filtered_data['TOTAREA'] < 3000) & (filtered_data['TOTAREA'] >= 1000)]
+# # distribute_plot_mod(filtered_data_mod, 'energy_total_2020', '1000~3000')
+# # filtered_data_mod = filtered_data[(filtered_data['TOTAREA'] < 5000) & (filtered_data['TOTAREA'] >= 3000)]
+# # distribute_plot_mod(filtered_data_mod, 'energy_total_2020', '3000~5000')
+# # filtered_data_mod = filtered_data[(filtered_data['TOTAREA'] < 10000) & (filtered_data['TOTAREA'] >= 5000)]
+# # distribute_plot_mod(filtered_data_mod, 'energy_total_2020', '5000~10000')
+# # filtered_data_mod = filtered_data[(filtered_data['TOTAREA'] < 30000) & (filtered_data['TOTAREA'] >= 10000)]
+# # distribute_plot_mod(filtered_data_mod, 'energy_total_2020', '10000~30000')
+#
+# # plt.xlim([0, 1000000])
+# # plt.ylim([0, 100000])
+# # plt.legend()
+# # plt.show()
+# # plt.clf()
+#
+# filtered_data_mod = filtered_data[(filtered_data['BLDG_AGE'] < 10) & (filtered_data['BLDG_AGE'] >= 5)]
+# filtered_data_mod = remove_percentile(0.05, filtered_data_mod, 'HEAT_converged_Carbon_sum_2020')
+# distribute_plot_mod(filtered_data_mod, 'HEAT_converged_Carbon_sum_2020')
+#
+# filtered_data_mod = filtered_data[(filtered_data['BLDG_AGE'] < 15) & (filtered_data['BLDG_AGE'] >= 10)]
+# filtered_data_mod = remove_percentile(0.05, filtered_data_mod, 'HEAT_converged_Carbon_sum_2020')
+# distribute_plot_mod(filtered_data_mod, 'HEAT_converged_Carbon_sum_2020')
+#
+# filtered_data_mod = filtered_data[(filtered_data['BLDG_AGE'] < 20) & (filtered_data['BLDG_AGE'] >= 15)]
+# filtered_data_mod = remove_percentile(0.05, filtered_data_mod, 'HEAT_converged_Carbon_sum_2020')
+# distribute_plot_mod(filtered_data_mod, 'HEAT_converged_Carbon_sum_2020')
+#
+# filtered_data_mod = filtered_data[(filtered_data['BLDG_AGE'] < 25) & (filtered_data['BLDG_AGE'] >= 20)]
+# filtered_data_mod = remove_percentile(0.05, filtered_data_mod, 'HEAT_converged_Carbon_sum_2020')
+# distribute_plot_mod(filtered_data_mod, 'HEAT_converged_Carbon_sum_2020')
+#
+#
+# '''filtered_data_mod = remove_percentile(0.05, filtered_data, 'HEAT_converged_Carbon_sum_2014')
+# distribute_plot_mod(filtered_data_mod, 'HEAT_converged_Carbon_sum_2014')
+# filtered_data_mod = remove_percentile(0.05, filtered_data, 'HEAT_converged_Carbon_sum_2015')
+# distribute_plot_mod(filtered_data_mod, 'HEAT_converged_Carbon_sum_2015')
+# filtered_data_mod = remove_percentile(0.05, filtered_data, 'HEAT_converged_Carbon_sum_2016')
+# distribute_plot_mod(filtered_data_mod, 'HEAT_converged_Carbon_sum_2016')
+# filtered_data_mod = remove_percentile(0.05, filtered_data, 'HEAT_converged_Carbon_sum_2017')
+# distribute_plot_mod(filtered_data_mod, 'HEAT_converged_Carbon_sum_2017')
+# filtered_data_mod = remove_percentile(0.05, filtered_data, 'HEAT_converged_Carbon_sum_2018')
+# distribute_plot_mod(filtered_data_mod, 'HEAT_converged_Carbon_sum_2018')
+# filtered_data_mod = remove_percentile(0.05, filtered_data, 'HEAT_converged_Carbon_sum_2019')
+# distribute_plot_mod(filtered_data_mod, 'HEAT_converged_Carbon_sum_2019')
+# filtered_data_mod = remove_percentile(0.05, filtered_data, 'HEAT_converged_Carbon_sum_2020')
+# distribute_plot_mod(filtered_data_mod, 'HEAT_converged_Carbon_sum_2020')'''
+# plt.show()
+#
+# plt.clf()
+# distribute_plot_mod(filtered_data_mod, 'ELEC_converged_Carbon_sum_2014', 'kde')
+# distribute_plot_mod(filtered_data_mod, 'ELEC_converged_Carbon_sum_2015', 'kde')
+# distribute_plot_mod(filtered_data_mod, 'ELEC_converged_Carbon_sum_2016', 'kde')
+# distribute_plot_mod(filtered_data_mod, 'ELEC_converged_Carbon_sum_2017', 'kde')
+# distribute_plot_mod(filtered_data_mod, 'ELEC_converged_Carbon_sum_2018', 'kde')
+# distribute_plot_mod(filtered_data_mod, 'ELEC_converged_Carbon_sum_2019', 'kde')
+# distribute_plot_mod(filtered_data_mod, 'ELEC_converged_Carbon_sum_2020', 'kde')
+# plt.show()
+# plt.clf()
+# distribute_plot_mod(filtered_data_mod, 'GAS_converged_Carbon_sum_2014', 'kde')
+# distribute_plot_mod(filtered_data_mod, 'GAS_converged_Carbon_sum_2015', 'kde')
+# distribute_plot_mod(filtered_data_mod, 'GAS_converged_Carbon_sum_2016', 'kde')
+# distribute_plot_mod(filtered_data_mod, 'GAS_converged_Carbon_sum_2017', 'kde')
+# distribute_plot_mod(filtered_data_mod, 'GAS_converged_Carbon_sum_2018', 'kde')
+# distribute_plot_mod(filtered_data_mod, 'GAS_converged_Carbon_sum_2019', 'kde')
+# distribute_plot_mod(filtered_data_mod, 'GAS_converged_Carbon_sum_2020', 'kde')
+# plt.show()
+# plt.clf()
+
 
 
 

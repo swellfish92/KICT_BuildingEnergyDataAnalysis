@@ -29,7 +29,7 @@ attrdata_db_matrix = {
     '도로명_주소':'ROAD_JUSO',
     '연면적':'TOTAREA',
     '세대_개수':'HHLD_CNT',
-    '사용승인일':'USEAPR_DAY',
+    '사용승인_일':'USEAPR_DAY',
     '용동_명':'MAIN_PURPS_NM',
     '단위_명':'UNIT_CD'
  }
@@ -130,11 +130,11 @@ def input_db(dataframe, connection, table_name):
 
 
 # ======================================================================================================================
-year_arr = ['2014', '2015', '2016', '2017', '2018', '2019']
+year_arr = ['2014', '2015', '2016', '2017', '2018', '2019', '2020', '2021']
 #year_arr = ['2020', '2021']
-energy_type = 'GAS'
-energy_type_lowercase = 'gas'   # DB규칙을 위한 소문자 값.
-txt_read_result = read_df_from_text('./BDT_BLDRGST_GAS.txt', energy_type, year_arr, seperator='\t', encoding='cp949')
+energy_type = 'HEAT'
+energy_type_lowercase = 'heat'   # DB규칙을 위한 소문자 값.
+txt_read_result = read_df_from_text('./BDT_BLDRGST_HEAT.txt', energy_type, year_arr, seperator='\t', encoding='cp949')
 
 # DB저장을 위한 테이블 이름배열 작성
 arr_for_dbsave = [energy_type_lowercase+'_attribute']
