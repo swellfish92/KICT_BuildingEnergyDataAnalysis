@@ -218,38 +218,52 @@ def find_duplicated(list):
 
 
 
-'''
-f = open('C:/Users/user/PycharmProjects/KICT_BuildingEnergyDataAnalysis/mart_kcy_01.txt', 'r')
-line = f.readlines()
-print(line)
-temp_arr = []
-print(temp_arr)
-temp_arrrrr = []
-for i in range(1000):
-    temp_arrrrr.append(temp_arr[i])
-result_arr = [temp_arrrrr]
-
-result_df = pd.DataFrame(result_arr)
-result_df.to_excel('tempresultttttt.xlsx')
-f.close()
-print('finishedddd')
-time.sleep(100000)
 
 
-data = pd.read_csv('C:/Users/user/PycharmProjects/KICT_BuildingEnergyDataAnalysis/pkcode_list.csv')
-another_data = pd.read_csv('C:/Users/user/PycharmProjects/KICT_BuildingEnergyDataAnalysis/result(Carbon_sum)_v6_20220425.csv')
-another_data = another_data[['MGM_BLD_PK', 'TOTAREA']]
-another_data.set_index('MGM_BLD_PK', inplace=True, drop=True)
-data.set_index('MGM_BLD_PK', inplace=True, drop=True)
-result = data.join(another_data, how='left')
-result.to_excel('PK코드면적검색결과.xlsx')
-print('finisheddd')
-time.sleep(10000)
 
+# data = pd.read_csv('C:/Users/user/PycharmProjects/KICT_BuildingEnergyDataAnalysis/pkcode_list.csv')
+# another_data = pd.read_csv('C:/Users/user/PycharmProjects/KICT_BuildingEnergyDataAnalysis/result(Carbon_sum)_v6_20220425.csv')
+# another_data = another_data[['MGM_BLD_PK', 'TOTAREA']]
+# another_data.set_index('MGM_BLD_PK', inplace=True, drop=True)
+# data.set_index('MGM_BLD_PK', inplace=True, drop=True)
+# result = data.join(another_data, how='left')
+# result.to_excel('PK코드면적검색결과.xlsx')
+# print('finisheddd')
+# time.sleep(10000)
+def drop_extreme(data, label):
+    # 아웃소스: 나중에 체크할 것
+    # s_ol_data = pd.Series(ol_data)
+    level_1q = data[label].quantile(0.25)
+    level_3q = data[label].quantile(0.75)
+    IQR = level_3q - level_1q
+    rev_range = 3  # 제거 범위 조절 변수
+    return data[(data[label] <= level_3q + (rev_range * IQR)) & (data[label] >= data[label] - (rev_range * IQR))]
 
-data = pd.read_csv('C:/Users/user/PycharmProjects/KICT_BuildingEnergyDataAnalysis/result(Carbon_sum)_v6_20220425.csv')
+data = pd.read_csv('C:/Users/user/PycharmProjects/KICT_BuildingEnergyDataAnalysis/result(Carbon_sum)_v7_20220425.csv')
+data = data[(data['TOTAREA'] > 100)]
+data = data[(data['TOTAREA'].notna())]
 
-purpose_arr = ['종교시설', '판매시설', '수련시설', '제1종근린생활시설', '문화및집회시설', '방송통신시설', '숙박시설', '운동시설', '공동주택', '제2종근린생활시설', '노유자시설', '교육연구시설', '업무시설', '의료시설', '자동차관련시설', '공장', '교정및군사시설']
+data['Carbon_sum_divarea_2019'] = (data['HEAT_converged_Carbon_sum_2019'].fillna(0) + data[
+    'ELEC_converged_Carbon_sum_2019'].fillna(0) + data['GAS_converged_Carbon_sum_2019'])
+data['Carbon_sum_divarea_2018'] = (data['HEAT_converged_Carbon_sum_2018'].fillna(0) + data[
+    'ELEC_converged_Carbon_sum_2018'].fillna(0) + data['GAS_converged_Carbon_sum_2018'])
+data['Carbon_sum_divarea_2017'] = (data['HEAT_converged_Carbon_sum_2017'].fillna(0) + data[
+    'ELEC_converged_Carbon_sum_2017'].fillna(0) + data['GAS_converged_Carbon_sum_2017'])
+
+# data = drop_extreme(data, 'Carbon_sum_divarea_2017')
+# print(data['Carbon_sum_divarea_2017'].mean())
+# data = drop_extreme(data, 'Carbon_sum_divarea_2018')
+# print(data['Carbon_sum_divarea_2018'].mean())
+# data = drop_extreme(data, 'Carbon_sum_divarea_2019')
+# print(data['Carbon_sum_divarea_2019'].mean())
+
+# k = data['Carbon_sum_divarea_2019'].sum() + data['Carbon_sum_divarea_2018'].sum() + data[
+#     'Carbon_sum_divarea_2017'].sum()
+# print(k / 555634)
+# time.sleep(1000)
+
+purpose_arr = remove_duplicated(data['MAIN_PURPS_NM'].dropna('').values.tolist())
+#purpose_arr = ['종교시설', '판매시설', '수련시설', '제1종근린생활시설', '문화및집회시설', '방송통신시설', '숙박시설', '운동시설', '제2종근린생활시설', '노유자시설', '교육연구시설', '업무시설', '의료시설', '자동차관련시설', '공장', '교정및군사시설']
 
 result = [['Purpose', '2017', '2018', '2019', '연도별평균의 평균값', '총평균 한번에 계산']]
 for purpose in purpose_arr:
@@ -259,34 +273,43 @@ for purpose in purpose_arr:
     temp_result.append(purpose)
     #print(temp_data)
     # 연면적 0값 제거
-    temp_data = temp_data[(temp_data['TOTAREA'] > 0)]
-    temp_data['Carbon_sum_divarea_2019'] = (temp_data['HEAT_converged_Carbon_sum_2019'].fillna(0) + temp_data['ELEC_converged_Carbon_sum_2019'].fillna(0) + temp_data['GAS_converged_Carbon_sum_2019'])/temp_data['TOTAREA']
-    temp_data['Carbon_sum_divarea_2018'] = (temp_data['HEAT_converged_Carbon_sum_2018'].fillna(0) + temp_data['ELEC_converged_Carbon_sum_2018'].fillna(0) + temp_data['GAS_converged_Carbon_sum_2018'])/temp_data['TOTAREA']
-    temp_data['Carbon_sum_divarea_2017'] = (temp_data['HEAT_converged_Carbon_sum_2017'].fillna(0) + temp_data['ELEC_converged_Carbon_sum_2017'].fillna(0) + temp_data['GAS_converged_Carbon_sum_2017'])/temp_data['TOTAREA']
-    #print('2017 면적당 탄소배출량 평균')
-    temp_result.append(temp_data['Carbon_sum_divarea_2017'].mean())
-    #print('2018 면적당 탄소배출량 평균')
-    temp_result.append(temp_data['Carbon_sum_divarea_2018'].mean())
-    #print('2019 면적당 탄소배출량 평균')
-    temp_result.append(temp_data['Carbon_sum_divarea_2019'].mean())
-    print('2017-2019 면적당 탄소배출량 총평균')
-    print((temp_data['Carbon_sum_divarea_2017'].mean()+temp_data['Carbon_sum_divarea_2018'].mean()+temp_data['Carbon_sum_divarea_2019'].mean())/3)
-    temp_result.append((temp_data['Carbon_sum_divarea_2017'].mean()+temp_data['Carbon_sum_divarea_2018'].mean()+temp_data['Carbon_sum_divarea_2019'].mean())/3)
+    #temp_data = temp_data[(temp_data['TOTAREA'] > 0)]
+
+
+    # #print('2017 면적당 탄소배출량 평균')
+    # print(temp_data)
+    # #temp_data_17 = drop_extreme(temp_data, 'Carbon_sum_divarea_2017')
+    # temp_result.append(temp_data['Carbon_sum_divarea_2017'].mean())
+    # #print('2018 면적당 탄소배출량 평균')
+    # #print(temp_data_17)
+    # #temp_data_18 = drop_extreme(temp_data, 'Carbon_sum_divarea_2018')
+    # temp_result.append(temp_data['Carbon_sum_divarea_2018'].mean())
+    # #print('2019 면적당 탄소배출량 평균')
+    # #print(temp_data_18)
+    # #temp_data_19 = drop_extreme(temp_data, 'Carbon_sum_divarea_2019')
+    # temp_result.append(temp_data['Carbon_sum_divarea_2019'].mean())
+    # print(temp_result)
+    # print('2017-2019 면적당 탄소배출량 총평균')
+    # print((temp_data['Carbon_sum_divarea_2017'].mean()+temp_data['Carbon_sum_divarea_2018'].mean()+temp_data['Carbon_sum_divarea_2019'].mean())/3)
+    # temp_result.append((temp_data['Carbon_sum_divarea_2017'].mean()+temp_data['Carbon_sum_divarea_2018'].mean()+temp_data['Carbon_sum_divarea_2019'].mean())/3)
 
     data_17 = temp_data[(temp_data['Carbon_sum_divarea_2017'] > 0)]
+    #data_17 = drop_extreme(data_17, 'Carbon_sum_divarea_2017')
     data_18 = temp_data[(temp_data['Carbon_sum_divarea_2018'] > 0)]
     data_19 = temp_data[(temp_data['Carbon_sum_divarea_2019'] > 0)]
 
-    temp_result.append((data_17['Carbon_sum_divarea_2017'].sum() + data_18['Carbon_sum_divarea_2018'].sum() + data_19['Carbon_sum_divarea_2019'].sum()) / (len(data_17) + len(data_18) + len(data_19)))
-
+    temp_result.append((data_17['Carbon_sum_divarea_2017'].sum() + data_18['Carbon_sum_divarea_2018'].sum() + data_19['Carbon_sum_divarea_2019'].sum()) / (data_17['TOTAREA'].sum() + data_18['TOTAREA'].sum() + data_19['TOTAREA'].sum()))
+    #temp_result.append((data_17['Carbon_sum_divarea_2017'].sum() + data_18['Carbon_sum_divarea_2018'].sum() + data_19['Carbon_sum_divarea_2019'].sum()) / 5609810)
+    print(temp_result)
     result.append(temp_result)
 
 df_result = pd.DataFrame(result)
-df_result.to_excel('결과나온것.xlsx')
+df_result.to_excel('결과나온것2.xlsx')
+print('끝')
 
 
 time.sleep(10000)
-'''
+
 
 # 원본 데이터를 가져옴
 data = pd.read_csv('C:/Users/user/PycharmProjects/KICT_BuildingEnergyDataAnalysis/result(toe_sum)_v6_20220425.csv')
