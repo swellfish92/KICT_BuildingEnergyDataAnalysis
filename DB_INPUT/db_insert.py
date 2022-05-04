@@ -181,7 +181,7 @@ result.rename(columns=namematrix_gas, inplace=True)        # 수정해야 하는
 
 # 결과 데이터프레임을 db에 저장한다.
 # 저장에 앞선 기본값 설정
-db_connection_str = 'mysql+pymysql://root:atdt01410@127.0.0.1/energy_data_another'
+db_connection_str = 'mysql+pymysql://root:atdt01410@127.0.0.1/energy_data'
 db_connection = sqlalchemy.create_engine(db_connection_str)
 data_type_matrix = {
     'PK':sqlalchemy.types.VARCHAR(33),
@@ -203,7 +203,7 @@ data_type_matrix = {
 print('connected')
 
 def input_db(dataframe, connection, table_name):
-    dataframe.to_sql(name=table_name, con=connection, if_exists='replace', index=True, dtype=data_type_matrix)
+    dataframe.to_sql(name=table_name, con=connection, if_exists='replace', index=True, dtype=data_type_matrix, method='multi')
     print('Data saved to DB with table name: ' + str(table_name))
 
 input_db(result, db_connection, 'gas')     # 수정해야 하는 주석

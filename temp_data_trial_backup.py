@@ -206,6 +206,17 @@ def min_max_scaling(array):
 
 
 
+# 중복을 제거한 배열을 반환함
+def find_duplicated(list):
+    temp_list = []
+    for item in list:
+        if item not in temp_list:
+            temp_list.append(item)
+    return temp_list
+
+#data = pd.read_csv('C:/Users/user/PycharmProjects/KICT_BuildingEnergyDataAnalysis/result(Carbon_sum)_v6_20220425.csv')
+
+
 
 '''
 f = open('C:/Users/user/PycharmProjects/KICT_BuildingEnergyDataAnalysis/mart_kcy_01.txt', 'r')
@@ -281,7 +292,7 @@ time.sleep(10000)
 data = pd.read_csv('C:/Users/user/PycharmProjects/KICT_BuildingEnergyDataAnalysis/result(toe_sum)_v6_20220425.csv')
 
 '''another_data = pd.read_csv('C:/Users/user/PycharmProjects/KICT_BuildingEnergyDataAnalysis/요청자료(수정).csv')
-data.set_index('MGM_BLD_PK', drop=Tru e, inplace=True)
+data.set_index('MGM_BLD_PK', drop=True, inplace=True)
 data = data[(data['TOTAREA'] >= 3000)]
 another_data.set_index('관리건축물_PK', drop=True, inplace=True)
 res_data = data.join(another_data, how='outer')

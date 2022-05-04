@@ -206,9 +206,20 @@ def min_max_scaling(array):
 
 
 
+# 중복을 제거한 배열을 반환함
+def find_duplicated(list):
+    temp_list = []
+    for item in list:
+        if item not in temp_list:
+            temp_list.append(item)
+    return temp_list
 
-'''
-f = open('C:/Users/user/PycharmProjects/KICT_BuildingEnergyDataAnalysis/mart_kcy_01.txt', 'r')
+#data = pd.read_csv('C:/Users/user/PycharmProjects/KICT_BuildingEnergyDataAnalysis/result(Carbon_sum)_v6_20220425.csv')
+
+
+
+
+f = open('C:/Users/user/Downloads/국토교통부_건축물대장_표제부+(2022년+03월)/mart_djy_03.txt', 'r')
 line = f.readlines()
 print(line)
 temp_arr = []
@@ -275,26 +286,37 @@ df_result.to_excel('결과나온것.xlsx')
 
 
 time.sleep(10000)
-'''
+
+
 
 # 원본 데이터를 가져옴
-data = pd.read_csv('C:/Users/user/PycharmProjects/KICT_BuildingEnergyDataAnalysis/result(toe_sum)_v6_20220425.csv')
-
+data = pd.read_csv('C:/Users/user/PycharmProjects/KICT_BuildingEnergyDataAnalysis/result(toe_sum_divarea)_v6_20220425.csv')
+data = data[(data['TOTAREA'] > 0)]
 '''another_data = pd.read_csv('C:/Users/user/PycharmProjects/KICT_BuildingEnergyDataAnalysis/요청자료(수정).csv')
-data.set_index('MGM_BLD_PK', drop=Tru e, inplace=True)
+data.set_index('MGM_BLD_PK', drop=True, inplace=True)
 data = data[(data['TOTAREA'] >= 3000)]
 another_data.set_index('관리건축물_PK', drop=True, inplace=True)
 res_data = data.join(another_data, how='outer')
 res_data.to_excel('PK코드비교result.xlsx')
 print('finishedddd')'''
 
-data['toe_sum_2020'] = data['HEAT_converged_toe_sum_2020'].fillna(0) + data['ELEC_converged_toe_sum_2020'].fillna(0) + data['GAS_converged_toe_sum_2020'].fillna(0)
-data['toe_sum_2019'] = data['HEAT_converged_toe_sum_2019'].fillna(0) + data['ELEC_converged_toe_sum_2019'].fillna(0) + data['GAS_converged_toe_sum_2019'].fillna(0)
-data['toe_sum_2018'] = data['HEAT_converged_toe_sum_2018'].fillna(0) + data['ELEC_converged_toe_sum_2018'].fillna(0) + data['GAS_converged_toe_sum_2018'].fillna(0)
-data['toe_sum_2017'] = data['HEAT_converged_toe_sum_2017'].fillna(0) + data['ELEC_converged_toe_sum_2017'].fillna(0) + data['GAS_converged_toe_sum_2017'].fillna(0)
-data['toe_sum_2016'] = data['HEAT_converged_toe_sum_2016'].fillna(0) + data['ELEC_converged_toe_sum_2016'].fillna(0) + data['GAS_converged_toe_sum_2016'].fillna(0)
-data['toe_sum_2015'] = data['HEAT_converged_toe_sum_2015'].fillna(0) + data['ELEC_converged_toe_sum_2015'].fillna(0) + data['GAS_converged_toe_sum_2015'].fillna(0)
-data['toe_sum_2014'] = data['HEAT_converged_toe_sum_2014'].fillna(0) + data['ELEC_converged_toe_sum_2014'].fillna(0) + data['GAS_converged_toe_sum_2014'].fillna(0)
+data['toe_sum_divarea_2020'] = data['HEAT_converged_toe_sum_divarea_2020'].fillna(0) + data['ELEC_converged_toe_sum_divarea_2020'].fillna(0) + data['GAS_converged_toe_sum_divarea_2020'].fillna(0)
+data['toe_sum_divarea_2019'] = data['HEAT_converged_toe_sum_divarea_2019'].fillna(0) + data['ELEC_converged_toe_sum_divarea_2019'].fillna(0) + data['GAS_converged_toe_sum_divarea_2019'].fillna(0)
+data['toe_sum_divarea_2018'] = data['HEAT_converged_toe_sum_divarea_2018'].fillna(0) + data['ELEC_converged_toe_sum_divarea_2018'].fillna(0) + data['GAS_converged_toe_sum_divarea_2018'].fillna(0)
+data['toe_sum_divarea_2017'] = data['HEAT_converged_toe_sum_divarea_2017'].fillna(0) + data['ELEC_converged_toe_sum_divarea_2017'].fillna(0) + data['GAS_converged_toe_sum_divarea_2017'].fillna(0)
+data['toe_sum_divarea_2016'] = data['HEAT_converged_toe_sum_divarea_2016'].fillna(0) + data['ELEC_converged_toe_sum_divarea_2016'].fillna(0) + data['GAS_converged_toe_sum_divarea_2016'].fillna(0)
+data['toe_sum_divarea_2015'] = data['HEAT_converged_toe_sum_divarea_2015'].fillna(0) + data['ELEC_converged_toe_sum_divarea_2015'].fillna(0) + data['GAS_converged_toe_sum_divarea_2015'].fillna(0)
+data['toe_sum_divarea_2014'] = data['HEAT_converged_toe_sum_divarea_2014'].fillna(0) + data['ELEC_converged_toe_sum_divarea_2014'].fillna(0) + data['GAS_converged_toe_sum_divarea_2014'].fillna(0)
+
+data['toe_sum_2014'] = data['toe_sum_divarea_2014'] * data['TOTAREA']
+data['toe_sum_2015'] = data['toe_sum_divarea_2015'] * data['TOTAREA']
+data['toe_sum_2016'] = data['toe_sum_divarea_2016'] * data['TOTAREA']
+data['toe_sum_2017'] = data['toe_sum_divarea_2017'] * data['TOTAREA']
+data['toe_sum_2018'] = data['toe_sum_divarea_2018'] * data['TOTAREA']
+data['toe_sum_2019'] = data['toe_sum_divarea_2019'] * data['TOTAREA']
+data['toe_sum_2020'] = data['toe_sum_divarea_2020'] * data['TOTAREA']
+
+
 
 color_arr = ['red', 'salmon', 'darkorange', 'goldenrod', 'olive', 'yellow', 'greenyellow', 'darkseagreen', 'lime', 'aquamarine', 'teal', 'cyan', 'slategray',
             'deepskyblue', 'steelblue', 'indigo', 'deeppink']
@@ -311,8 +333,9 @@ year_list = [2014, 2015, 2016, 2017, 2018, 2019, 2020]
 #temp_list = [['종교시설', '판매시설', '수련시설', '제1종근린생활시설', '문화및집회시설', '방송통신시설', '숙박시설', '운동시설', '공동주택'], ['제2종근린생활시설', '노유자시설', '교육연구시설', '업무시설', '의료시설', '자동차관련시설', '공장', '교정및군사시설']]
 #temp_list = [['제2종근린생활시설', '노유자시설', '교육연구시설', '업무시설', '의료시설', '자동차관련시설', '공장', '교정및군사시설']]
 #mollu_list = [[['종교시설']], [['판매시설']], [['수련시설']], [['제1종근린생활시설']], [['문화및집회시설']], [['방송통신시설']], [['숙박시설']], [['운동시설']], [['공동주택']], [['제2종근린생활시설']], [['노유자시설']], [['교육연구시설']], [['업무시설']], [['의료시설']], [['자동차관련시설']], [['공장']], [['교정및군사시설']]]
-temp_list = [['종교시설'], ['판매시설'], ['수련시설'], ['제1종근린생활시설'], ['문화및집회시설'], ['방송통신시설'], ['숙박시설'], ['운동시설'], ['공동주택'], ['제2종근린생활시설'], ['노유자시설'], ['교육연구시설'], ['업무시설'], ['의료시설'], ['자동차관련시설'], ['공장'], ['교정및군사시설']]
+temp_list = [['종교시설'], ['판매시설'], ['수련시설'], ['제1종근린생활시설'], ['문화및집회시설'], ['방송통신시설'], ['숙박시설'], ['운동시설'], ['공동주택'], ['제2종근린생활시설'], ['노유자시설'], ['교육연구시설'], ['업무시설'], ['의료시설'], ['자동차관련시설'], ['공장']]
 tmp_lst = []
+temp_list = [['업무시설'], ['공동주택']]
 
 #for temp_list in mollu_list:
 for purpose_list in temp_list:
@@ -320,15 +343,16 @@ for purpose_list in temp_list:
     for purpose in purpose_list:
         value = data[(data['MAIN_PURPS_NM'] == purpose)]
         print(purpose)
-        #print(value['toe_sum_2020'].sum())
+        #print(value['toe_sum_divarea_2020'])
         divided_res = []
         for year in year_list:
             value = value[(value['toe_sum_'+str(year)] >= 2000)]
-            insert_value = value['toe_sum_'+str(year)]
+            insert_value = value['toe_sum_divarea_'+str(year)]
+            print(insert_value)
             insert_value = insert_value.replace([np.inf, -np.inf], np.nan)
             insert_value.dropna()
             #print(insert_value)
-            divided_res.append(insert_value.sum())
+            divided_res.append(insert_value.mean())
 
         plt.scatter([0, 1, 2, 3, 4, 5, 6], divided_res, c=color_arr[temp_list.index(purpose_list)])
 
@@ -346,15 +370,15 @@ for purpose_list in temp_list:
         print(color_arr[temp_list.index(purpose_list)])
         plt.plot(np.array([0, 6]), fit_y, color=color_arr[temp_list.index(purpose_list)], linestyle='dashdot', label=str(purpose)+'_2000toe_regression', linewidth = 1)
         if fit_line[1] > 0:
-            plt.text(-1, fit_y[0], str(round(fit_line[0], 2)) + 'x +' + str(round(fit_line[1], 2)))
+            plt.text(-1, fit_y[0], str(round(fit_line[0], 6)) + 'x +' + str(round(fit_line[1], 2)))
         elif fit_line[1] < 0:
-            plt.text(-1, fit_y[0], str(round(fit_line[0], 2)) + 'x ' + str(round(fit_line[1], 2)))
+            plt.text(-1, fit_y[0], str(round(fit_line[0], 6)) + 'x ' + str(round(fit_line[1], 2)))
 
         plt.xticks(range(len(divided_res)), year_list)
         tmp_lst.append(max(divided_res))
 
 
-plt.ylim(0, max(tmp_lst)*1.2)
+plt.ylim(0, 100)
 plt.xlim(-2, 6)
 plt.legend(ncol=1, loc='center right', bbox_to_anchor=(1.3,0.5), scatterpoints=1)
 plt.show()
@@ -372,11 +396,11 @@ for purpose_list in temp_list:
         divided_res = []
         for year in year_list:
             #value = value[(value['toe_sum_'+str(year)] <= 2000)]
-            insert_value = value['toe_sum_'+str(year)]
+            insert_value = value['toe_sum_divarea_'+str(year)]
             insert_value = insert_value.replace([np.inf, -np.inf], np.nan)
             insert_value.dropna()
             #print(insert_value)
-            divided_res.append(insert_value.sum())
+            divided_res.append(insert_value.mean())
 
         plt.scatter([0, 1, 2, 3, 4, 5, 6], divided_res, c=color_arr[temp_list.index(purpose_list)])
 
@@ -393,9 +417,9 @@ for purpose_list in temp_list:
         print(fit_y)
         plt.plot(np.array([0, 6]), fit_y, color=color_arr[temp_list.index(purpose_list)], label=str(purpose) + '_3000area_regression', linewidth=1)
         if fit_line[1] > 0:
-            plt.text(-1, fit_y[0], str(round(fit_line[0], 2)) + 'x +' + str(round(fit_line[1], 2)))
+            plt.text(-1, fit_y[0], str(round(fit_line[0], 6)) + 'x +' + str(round(fit_line[1], 2)))
         elif fit_line[1] < 0:
-            plt.text(-1, fit_y[0], str(round(fit_line[0], 2)) + 'x ' + str(round(fit_line[1], 2)))
+            plt.text(-1, fit_y[0], str(round(fit_line[0], 6)) + 'x ' + str(round(fit_line[1], 2)))
 
         plt.xticks(range(len(divided_res)), year_list)
         tmp_lst.append(max(divided_res))
