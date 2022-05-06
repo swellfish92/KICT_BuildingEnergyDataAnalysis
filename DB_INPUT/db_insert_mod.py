@@ -8,14 +8,14 @@ import sqlalchemy
 
 from functions import *
 
-# energy_db = pymysql.connect(
-#     user = 'root',
-#     passwd = 'atdt01410',
-#     host = '127.0.0.1',
-#     db = 'energy_data',
-#     charset = 'utf8'
-# )
-#
+energy_db = pymysql.connect(
+    user = 'root',
+    passwd = 'atdt01410',
+    host = '127.0.0.1',
+    db = 'energy_data',
+    charset = 'utf8'
+)
+
 # energy_db_another = pymysql.connect(
 #     user = 'root',
 #     passwd = 'atdt01410',
@@ -25,9 +25,11 @@ from functions import *
 # )
 
 # 파일 데이터를 로드
-f = open('C:/Users/user/Downloads/국토교통부_건축물대장_표제부+(2022년+03월)/mart_djy_03.txt', 'r')
+f = open('E:/PycharmProjects/KICT_BuildingPKcodeSearch/mart_djy_03.txt', 'r')
 line_arr = f.readlines()
 f.close()
+
+sgg_arr = ['11740', '11290', '11530', '11305', '11410', '11500', '11440', '11710', '11230', '11140', '11110', '11350', '11680', '11560', '11620', '11590', '11200', '11170', '11380', '11260', '11215', '11545', '11320', '11650', '11470', '11000']
 
 temp_res = []
 for i in range(77):
@@ -35,10 +37,11 @@ for i in range(77):
 
 for element in line_arr:
     element_mod = element.split('\n')[0]
-    print(element_mod)
+    #print(element_mod)
     splitted_arr = element_mod.split('|')
-    for i in range(len(splitted_arr)):
-        temp_res[i].append(splitted_arr[i])
+    if str(splitted_arr[8]) in sgg_arr:
+        for i in range(len(splitted_arr)):
+            temp_res[i].append(splitted_arr[i])
 
 base_dict = {
 'mgmBldrgstPk' : temp_res[0],
@@ -121,12 +124,13 @@ base_dict = {
 }
 
 base_df = pd.DataFrame(base_dict)
-
+base_df.to_csv('tempresult_buildinglegister_Seoul.csv', encoding='utf-8-sig')
+print('csv exported')
 
 # 결과 데이터프레임을 db에 저장한다.
 # 저장에 앞선 기본값 설정
 db_connection_str = 'mysql+pymysql://root:atdt01410@127.0.0.1/energy_data'
-db_connection = sqlalchemy.create_engine(db_connection_str, use_batch_mode=True)
+db_connection = sqlalchemy.create_engine(db_connection_str)
 data_type_matrix = {
     'mgmBldrgstPk' : sqlalchemy.types.VARCHAR(33),
     'regstrGbCd' : sqlalchemy.types.VARCHAR(1),
@@ -148,8 +152,8 @@ data_type_matrix = {
     'naRoadCd' : sqlalchemy.types.VARCHAR(12),
     'naBjdongCd' : sqlalchemy.types.VARCHAR(5),
     'naUgrndCd' : sqlalchemy.types.VARCHAR(1),
-    'naMainBun' : sqlalchemy.types.INT,
-    'naSubBun' : sqlalchemy.types.INT,
+    'naMainBun' : sqlalchemy.types.VARCHAR(5),
+    'naSubBun' : sqlalchemy.types.VARCHAR(5),
     'dongNm' : sqlalchemy.types.VARCHAR(100),
     'mainAtchGbCd' : sqlalchemy.types.CHAR(1),
     'mainAtchGbCdNm' : sqlalchemy.types.VARCHAR(100),
@@ -210,10 +214,10 @@ data_type_matrix = {
 print('connected')
 
 def input_db(dataframe, connection, table_name):
-    dataframe.to_sql(name=table_name, con=connection, if_exists='replace', index=True, dtype=data_type_matrix, method='multi')
+    dataframe.to_sql(name=table_name, con=connection, if_exists='replace', index=True, dtype=data_type_matrix)
     print('Data saved to DB with table name: ' + str(table_name))
 
-input_db(base_df, db_connection, 'Building_legister_title')     # 수정해야 하는 주석
+input_db(base_df, db_connection, 'Building_legister_title_seoul')     # 수정해야 하는 주석
 
 
 # cursor = energy_db_another.cursor(pymysql.cursors.DictCursor)
