@@ -8,13 +8,13 @@ import sqlalchemy
 
 from functions import *
 
-energy_db = pymysql.connect(
+'''energy_db = pymysql.connect(
     user = 'root',
     passwd = 'atdt01410',
     host = '127.0.0.1',
     db = 'energy_data',
     charset = 'utf8'
-)
+)'''
 
 # energy_db_another = pymysql.connect(
 #     user = 'root',
@@ -25,7 +25,7 @@ energy_db = pymysql.connect(
 # )
 
 # 파일 데이터를 로드
-f = open('E:/PycharmProjects/KICT_BuildingPKcodeSearch/mart_djy_03.txt', 'r')
+f = open('C:/Users/user/Downloads/mart_djy_03.txt', 'r')
 line_arr = f.readlines()
 f.close()
 
@@ -124,7 +124,7 @@ base_dict = {
 }
 
 base_df = pd.DataFrame(base_dict)
-base_df.to_csv('tempresult_buildinglegister_Seoul.csv', encoding='utf-8-sig')
+base_df.to_csv('tempresult_buildinglegister_Seoul_2020.csv', encoding='utf-8-sig')
 print('csv exported')
 
 # 결과 데이터프레임을 db에 저장한다.

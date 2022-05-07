@@ -7,18 +7,18 @@ import numpy as np
 import sqlalchemy
 
 from functions import *
-from db_insert_functions import *
+from DB_INPUT.db_insert_functions import *
 
 # 건축물대장 표제부를 입력하기 위한 로직
 
-energy_db = pymysql.connect(
+'''energy_db = pymysql.connect(
     user = 'root',
     passwd = 'atdt01410',
     host = '127.0.0.1',
     db = 'energy_data',
     charset = 'utf8'
 )
-
+'''
 # 건축물대장 API와 통일시키기 위한 딕셔너리
 apikey_eng_dict = {
     '관리_건축물대장_PK' : 'mgmBldrgstPk',
@@ -96,7 +96,7 @@ apikey_eng_dict = {
 # )
 
 # 파일 데이터를 로드
-f = open('E:/PycharmProjects/KICT_BuildingPKcodeSearch/mart_djy_02.txt', 'r')
+f = open('C:/Users/user/Downloads/mart_djy_02.txt', 'r')
 line_arr = f.readlines()
 f.close()
 print(len(line_arr))
@@ -114,17 +114,17 @@ for element in line_arr:
         for i in range(len(splitted_arr)):
             temp_res[i].append(splitted_arr[i])
 
-key_arr = read_eais_basedata(1, 'C:/Users/Swellfish/Downloads/건축물대장_총괄표제부.xls', apikey_eng_dict)
+key_arr = read_eais_basedata(1, 'C:/Users/user/Downloads/건축물대장_총괄표제부.xls', apikey_eng_dict)
 base_df = make_basedict(key_arr, temp_res, type='df')
 
-base_df.to_csv('tempresult_buildinglegister_recaptitle_Seoul.csv', encoding='utf-8-sig')
+base_df.to_csv('tempresult_buildinglegister_recaptitle_Seoul_2020.csv', encoding='utf-8-sig')
 print('csv exported')
 
 # 결과 데이터프레임을 db에 저장한다.
 # 저장에 앞선 기본값 설정
 db_connection_str = 'mysql+pymysql://root:atdt01410@127.0.0.1/energy_data'
 db_connection = sqlalchemy.create_engine(db_connection_str)
-data_type_matrix = read_eais_basedata(2, 'C:/Users/Swellfish/Downloads/건축물대장_총괄표제부.xls', apikey_eng_dict)
+data_type_matrix = read_eais_basedata(2, 'C:/Users/user/Downloads/건축물대장_총괄표제부.xls', apikey_eng_dict)
 print('connected')
 print(data_type_matrix)
 
