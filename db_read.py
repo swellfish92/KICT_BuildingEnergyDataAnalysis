@@ -89,8 +89,8 @@ def get_coefficient_string(energy_sort, calc_type):
     coeff_dict = {
         'EUI':{                     # EUI단위는 kWh/m^2으로 통일했음.
             'ELEC':'*2.75',         # 원래 kWh라서 추가작업 필요 없음.
-            'GAS':'*1.1*0.2778',    # 1 MJ/m^2 = 0.2778 kWh/m2\^2
-            'HEAT': '*0.728*0.2778' # 1 MJ/m^2 = 0.2778 kWh/m2\^2
+            'GAS':'*0.30558',    # 1 MJ/m^2 = 0.2778 kWh/m2\^2, *1.1*0.2778 = *0.30558
+            'HEAT': '*0.2022384' # 1 MJ/m^2 = 0.2778 kWh/m2\^2, *0.728*0.2778 = *0.2022384
         },
         'Carbon':{              # 탄소배출량 단위는 Kg으로 통일했음.
             'ELEC': '*0.4598',  #0.4594 t*CO2eq/MWh = 0.4594 kg*CO2eq/kWh    **for reference: https://tips.energy.or.kr/diagnosis/qna_view.do?no=1796

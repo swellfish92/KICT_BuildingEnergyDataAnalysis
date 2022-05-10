@@ -551,6 +551,7 @@ def address_search(dataframe, address_string):
 
 
 
+
 '''
 df = pd.read_csv('bind_result_total.csv')
 df = df[['PNU', 'mgmBldrgstPk_recap', 'platPlc_recap', 'newPlatPlc_recap', 'bldNm_recap', 'platArea_recap', 'archArea_recap', 'bcRat_recap', 'totArea_recap', 'mainPurpsCdNm_recap', 'mainBldCnt', 'atchBldCnt_recap', 'atchBldArea_recap', 'totPkngCnt', 'pmsDay_recap', 'stcnsDay_recap', 'useAprDay_recap', 'platArea_arr_recap', 'archArea_arr_recap', 'bcRat_arr_recap', 'totArea_arr_recap', 'mainBldCnt_arr', 'atchBldCnt_arr_recap', 'atchBldArea_arr_recap', 'totPkngCnt_arr', 'mgmBldrgstPk_arr_recap', 'platPlc_arr_recap', 'newPlatPlc_arr_recap', 'mainPurpsCdNm_arr_recap', 'etcPurps_arr_recap', 'pmsDay_arr_recap', 'stcnsDay_arr_recap', 'useAprDay_arr_recap', 'mgmBldrgstPk_title', 'platPlc_title', 'newPlatPlc_title', 'bldNm_title', 'dongNm', 'platArea_title', 'archArea_title', 'bcRat_title', 'totArea_title', 'mainPurpsCdNm_title', 'atchBldCnt_title', 'atchBldArea_title', 'totDongTotArea', 'pmsDay_title', 'stcnsDay_title', 'useAprDay_title', 'platArea_arr_title', 'archArea_arr_title', 'bcRat_arr_title', 'totArea_arr_title', 'atchBldCnt_arr_title', 'atchBldArea_arr_title', 'totDongTotArea_arr', 'mgmBldrgstPk_arr_title', 'platPlc_arr_title', 'newPlatPlc_arr_title', 'mainAtchGbCdNm_arr', 'mainPurpsCdNm_arr_title', 'etcPurps_arr_title', 'pmsDay_arr_title', 'stcnsDay_arr_title', 'useAprDay_arr_title']]
@@ -800,6 +801,12 @@ def rebase_pk_to_pnu(dataframe, sum_arr, backup_arr):
     title_df = title_df.astype({'PNU': 'str'})
     title_df.set_index('PNU', drop=True, inplace=True)
     return title_df
+
+
+
+
+
+
 
 '''energy = pd.read_csv('E:/PycharmProjects/KICT_BuildingEnergyDataAnalysis/Data_join/PNU_energydata.csv')
 base = pd.read_csv('E:/PycharmProjects/KICT_BuildingEnergyDataAnalysis/Data_join/최종_result_title_2020_count.csv')
