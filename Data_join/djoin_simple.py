@@ -527,6 +527,8 @@ def add_pnu_mod(dataframe):
     dataframe['platGbCd'] = temp_list
     dataframe = dataframe.astype({'platGbCd': 'int', 'BUN': 'int', 'JI': 'int'})
     dataframe = dataframe.astype({'sigunguCd': 'str', 'bjdongCd':'str', 'platGbCd':'str', 'BUN':'str', 'JI':'str'})
+    dataframe['bjdongCd'] = dataframe['bjdongCd'].str.pad(width=6, side='right', fillchar='-')
+    dataframe['platGbCd'] = dataframe['platGbCd'].str.pad(width=2, side='right', fillchar='-')
     dataframe['BUN'] = dataframe['BUN'].str.pad(width=4, side='left', fillchar='0')
     dataframe['JI'] = dataframe['JI'].str.pad(width=4, side='left', fillchar='0')
     dataframe['PNU'] = dataframe['sigunguCd'].str.cat(dataframe['bjdongCd'].str.cat(dataframe['platGbCd'].str.cat(dataframe['BUN'].str.cat(dataframe['JI']))))
@@ -748,11 +750,109 @@ def add_pnu(dataframe):
     dataframe['PNU'] = dataframe['sigunguCd'].str.cat(dataframe['bjdongCd'].str.cat(dataframe['platGbCd'].str.cat(dataframe['bun'].str.cat(dataframe['ji']))))
     return dataframe
 
-# 에너지데이터를 붙이는 과정
+
+def rebase_pk_to_pnu(dataframe, sum_arr, backup_arr):
+    dataframe = add_pnu_mod(dataframe)
+    key_list = dataframe.columns.tolist()
+    print(key_list)
+
+    temp_dict = {}
+    for item in key_list:
+        temp_dict[item] = []
+    for item in backup_arr:
+        temp_dict[item] = []
+
+    print(len(dataframe))
+    for i in range(len(dataframe)):
+        row = dataframe.iloc[i]
+        #print(row)
+        if row['PNU'] in temp_dict['PNU']:
+            # PNU가 이미 존재할 경우, 인덱스 값으로 배열의 순서를 구함
+            iter_num = temp_dict['PNU'].index(row['PNU'])
+            # 해당순서 배열에 해당하는 것들 중 가산할 것
+            for sum_key in sum_arr:
+                temp_dict[sum_key][iter_num] = temp_dict[sum_key][iter_num] + row[sum_key]
+            for backup_key in backup_arr:
+                #print(temp_dict[backup_key])
+                temp_dict[backup_key][iter_num].append(row[backup_key])
+        else:
+            # PNU가 없을 경우, 새로 항목을 추가함, 키 값도 없을 경우는 새로 만듬
+            for key in row.keys():
+                if key in sum_arr:
+                    if key not in temp_dict:
+                        temp_dict[key] = [row[key]]
+                    else:
+                        temp_dict[key].append(row[key])
+                elif key in backup_arr:
+                    if key not in temp_dict:
+                        temp_dict[key] = [[row[key]]]
+                    else:
+                        temp_dict[key].append([row[key]])
+                else:
+                    # 어디에도 해당하지 않으면 마지막 값을 유지시킨다.
+                    if key not in temp_dict:
+                        temp_dict[key] = [row[key]]
+                    else:
+                        temp_dict[key].append(row[key])
+
+
+    title_df = pd.DataFrame(temp_dict)
+    title_df = title_df.astype({'PNU': 'str'})
+    title_df.set_index('PNU', drop=True, inplace=True)
+    return title_df
+
+'''energy = pd.read_csv('E:/PycharmProjects/KICT_BuildingEnergyDataAnalysis/Data_join/PNU_energydata.csv')
+base = pd.read_csv('E:/PycharmProjects/KICT_BuildingEnergyDataAnalysis/Data_join/최종_result_title_2020_count.csv')
+energy.set_index('PNU', drop=True, inplace=True)
+base.set_index('PNU', drop=True, inplace=True)
+base = base.join(energy, how='left')
+base.to_csv('E:/PycharmProjects/KICT_BuildingEnergyDataAnalysis/Data_join/최종에너지합산결과_2020_20220507_v2.csv', encoding='utf-8 sig')
+raise IOError'''
+
+'''# 에너지데이터를 붙이는 과정
 # 이 부분은 나중에 함수화가 필수일 듯?
 
+carbon_data = pd.read_csv('E:/PycharmProjects/KICT_BuildingEnergyDataAnalysis/Data_join/Carbon_lightweight.csv')
+toe_data = pd.read_csv('E:/PycharmProjects/KICT_BuildingEnergyDataAnalysis/Data_join/toe_lightweight.csv')
+age_data = pd.read_csv('E:/PycharmProjects/KICT_BuildingEnergyDataAnalysis/building_agedata.csv')
 
-data_title = pd.read_csv('C:/Users/user/PycharmProjects/tempresult_buildinglegister_title_Seoul_2020.csv')
+# 빠르게 2020년 합만 구함
+carbon_data['carbon_2020'] = carbon_data['HEAT_converged_Carbon_sum_2020'].fillna(0) + carbon_data['GAS_converged_Carbon_sum_2020'].fillna(0) + carbon_data['ELEC_converged_Carbon_sum_2020'].fillna(0)
+toe_data['toe_2020'] = toe_data['HEAT_converged_toe_sum_2020'].fillna(0) + toe_data['GAS_converged_toe_sum_2020'].fillna(0) + toe_data['ELEC_converged_toe_sum_2020'].fillna(0)
+
+carbon_data = carbon_data[['MGM_BLD_PK', 'carbon_2020']]
+toe_data = toe_data[['MGM_BLD_PK', 'SIGUNGU_NM', 'BJDONG_NM', 'PLAT_GB_CD', 'BUN', 'JI', 'toe_2020']]
+
+carbon_data.set_index('MGM_BLD_PK', drop=True, inplace=True)
+toe_data.set_index('MGM_BLD_PK', drop=True, inplace=True)
+age_data.set_index('MGM_BLD_PK', drop=True, inplace=True)
+
+result = toe_data.join(carbon_data, how='left')
+result = result.join(age_data, how='left')
+
+sum_arr = ['toe_2020', 'carbon_2020']
+backup_arr = ['USEAPR_DAY', 'BLDG_AGE']
+
+result['USEAPR_DAY'] = result['USEAPR_DAY'].fillna(0)
+result['BLDG_AGE'] = result['BLDG_AGE'].fillna(0)
+result = result.astype({'USEAPR_DAY': 'int', 'BLDG_AGE':'int'})
+
+final_result = rebase_pk_to_pnu(result, sum_arr, backup_arr)
+print(final_result)
+final_result = final_result[['toe_2020', 'carbon_2020', 'USEAPR_DAY', 'BLDG_AGE']]
+final_result.to_csv('E:/PycharmProjects/KICT_BuildingEnergyDataAnalysis/Data_join/PNU_energydata.csv', encoding='utf-8 sig')
+
+
+print('끝끝끝')
+raise IOError
+'''
+
+
+
+
+
+
+data_title = pd.read_csv('E:/PycharmProjects/KICT_BuildingEnergyDataAnalysis/Data_join/총괄표제부에만_있는것_모음.csv')
 #data_title = data_title.loc[0:100]
 data_title = add_pnu(data_title)
 temp_dict = {}
@@ -786,10 +886,8 @@ for i in range(len(data_title)):
         # 2. 부속건축물 수 및 면적
         temp_dict['atchBldCnt'][iter_num] = temp_dict['atchBldCnt'][iter_num] + row['atchBldCnt']
         temp_dict['atchBldCnt_arr'][iter_num].append(row['atchBldCnt'])
-        temp_dict['atchBldArea'][iter_num] = temp_dict['atchBldArea'][iter_num] + row['atchBldArea']
+        temp_dict['mainBldCnt'][iter_num] = temp_dict['mainBldCnt'][iter_num] + row['mainBldCnt']
         temp_dict['atchBldArea_arr'][iter_num].append(row['atchBldArea'])
-        temp_dict['totDongTotArea'][iter_num] = temp_dict['totDongTotArea'][iter_num] + row['totDongTotArea']
-        temp_dict['totDongTotArea_arr'][iter_num].append(row['totDongTotArea'])
         # 가산하지는 않으나 배열에 추가할 것
         # 1. PK코드
         temp_dict['mgmBldrgstPk_arr'][iter_num].append(row['mgmBldrgstPk'])
@@ -823,9 +921,9 @@ title_df = pd.DataFrame(temp_dict)
 title_df = title_df.astype({'PNU': 'str'})
 title_df.set_index('PNU', drop=True, inplace=True)
 print(title_df)
-title_df.to_csv('bind_result_title_2020.csv', encoding='utf-8 sig')
+title_df.to_csv('총괄표제부결과.csv', encoding='utf-8 sig')
 
-
+raise IOError
 
 
 
@@ -1117,3 +1215,4 @@ total_df.to_csv('bind_result_total_2020.csv', encoding='utf-8 sig')
 # main_data = main_data.join(area_data_recaptitle, how='left', rsuffix='_recaptitle')
 #
 # main_data.to_csv('missing_pkcode_area_attached.csv', encoding='utf-8-sig')
+
