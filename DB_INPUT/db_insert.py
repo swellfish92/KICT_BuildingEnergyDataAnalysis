@@ -9,17 +9,17 @@ import sqlalchemy
 from functions import *
 
 energy_db = pymysql.connect(
-    user = 'root',
+    user = 'swellfish_remote',
     passwd = 'atdt01410',
-    host = '222.236.133.141:3306',
+    host = '222.236.133.141',
     db = 'energy_data',
     charset = 'utf8'
 )
 
 energy_db_another = pymysql.connect(
-    user = 'root',
+    user = 'swellfish_remote',
     passwd = 'atdt01410',
-    host = '222.236.133.141:3306',
+    host = '222.236.133.141',
     db = 'energy_data_another',
     charset = 'utf8'
 )
@@ -174,8 +174,25 @@ def txt_read_to_df_spc(filedir, header):
     return data
 
 
+data = pd.read_csv('C:/Users/user/Downloads/elec_res.csv')
 
+# 결과 데이터프레임을 db에 저장한다.
+# 저장에 앞선 기본값 설정
+db_connection_str = 'mysql+pymysql://swellfish_remote:atdt01410@222.236.133.141/energy_data'
+db_connection = sqlalchemy.create_engine(db_connection_str)
+data_type_matrix = {
+    'MGM_BLD_PK':sqlalchemy.types.VARCHAR(33)
+}
 
+print('connected')
+
+def input_db(dataframe, connection, table_name):
+    dataframe.to_sql(name=table_name, con=connection, if_exists='replace', index=True, dtype=data_type_matrix, method='multi')
+    print('Data saved to DB with table name: ' + str(table_name))
+
+input_db(data, db_connection, 'elec_2021')     # 수정해야 하는 주석
+
+raise IOError
 
 
 
