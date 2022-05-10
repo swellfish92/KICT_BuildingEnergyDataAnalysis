@@ -11,7 +11,7 @@ from functions import *
 energy_db = pymysql.connect(
     user = 'root',
     passwd = 'atdt01410',
-    host = '127.0.0.1',
+    host = '222.236.133.141:3306',
     db = 'energy_data',
     charset = 'utf8'
 )
@@ -19,7 +19,7 @@ energy_db = pymysql.connect(
 energy_db_another = pymysql.connect(
     user = 'root',
     passwd = 'atdt01410',
-    host = '127.0.0.1',
+    host = '222.236.133.141:3306',
     db = 'energy_data_another',
     charset = 'utf8'
 )
@@ -73,19 +73,19 @@ def unify_energy_unit(dataframe,  unit_col, data_col_arr):
             for col_index in data_col_arr:
                 # 1Gcal = 4184MJ (ref:http://www.conversion-website.com/energy/gigacalorie-to-megajoule.html)
                 pk_index = dataframe.loc[idx,:]['MGM_BLD_PK']
-                dataframe[col_index][idx] = dataframe.loc[idx,:][col_index] * 4184
+                dataframe[col_index][idx] = float(dataframe.loc[idx,:][col_index]) * 4184
                 dataframe[unit_col][idx] = 'MJ'
 
         elif dataframe.loc[idx,:][unit_col] == 'Mcal':
             for col_index in data_col_arr:
                 # 1Mcal = 4.184MJ (ref:http://www.conversion-website.com/energy/gigacalorie-to-megajoule.html)
-                dataframe[col_index][idx] = dataframe.loc[idx,:][col_index] * 4.184
+                dataframe[col_index][idx] = float(dataframe.loc[idx,:][col_index]) * 4.184
                 dataframe[unit_col][idx] = 'MJ'
 
         elif dataframe.loc[idx, :][unit_col] == 'MWh' or dataframe.loc[idx, :][unit_col] == 'Mwh' :
             for col_index in data_col_arr:
                 # 1MWh = 3600MJ
-                dataframe[col_index][idx] = dataframe.loc[idx, :][col_index] * 3600
+                dataframe[col_index][idx] = float(dataframe.loc[idx, :][col_index]) * 3600
                 dataframe[unit_col][idx] = 'MJ'
 
         elif dataframe.loc[idx, :][unit_col] != 'MJ':
@@ -138,12 +138,123 @@ def join_dataframes(index_colname, df_list):
 
     return result
 
+import time
+
+def txt_read_to_df(filedir):
+    f = open(filedir, 'r')
+    txt_arr = f.readlines()
+    f.close()
+    test_line = txt_arr[0].split('\n')[0]
+    if '\t' in test_line:
+        splitter = '\t'
+    elif '|' in test_line:
+        splitter = '|'
+    header = txt_arr[0].split('\n')[0].split(splitter)
+    txt_arr.pop()
+    temp_arr = []
+    for line in txt_arr:
+        line_a = line.split('\n')[0]
+        temp_arr.append(line_a.split(splitter))
+    data = pd.DataFrame(temp_arr[1:], columns=header)
+    return data
+
+def txt_read_to_df_spc(filedir, header):
+    f = open(filedir, 'r')
+    txt_arr = f.readlines()
+    f.close()
+    temp_arr = []
+    for line in txt_arr:
+        line_a = line.split('\n')[0]
+        line_a = line_a.split('|')
+        res_line = line_a[16:]
+        res_line.append(line_a[1])
+        res_line.append(line_a[15])
+        temp_arr.append(res_line)
+    data = pd.DataFrame(temp_arr, columns=header)
+    return data
 
 
 
 
 
 
+
+
+heat_data_01 = txt_read_to_df('C:/Users/user/Downloads/BDT_BLDRGST_HEAT_2004_2101.txt')
+heat_data_01 = heat_data_01[['MGM_BLD_PK', 'HEAT_202101', 'UNIT_CD']]
+elec_data_01 = txt_read_to_df('C:/Users/user/Downloads/BDT_BLDRGST_ELE_2004_2101.txt')
+elec_data_01 = elec_data_01[['MGM_BLD_PK', 'ELE_202101']]
+gas_data_01 = txt_read_to_df('C:/Users/user/Downloads/BDT_BLDRGST_GAS_2004_2101.txt')
+gas_data_01 = gas_data_01[['MGM_BLD_PK', 'GAS_202101']]
+
+heat_data_01 = unify_energy_unit(heat_data_01, 'UNIT_CD', ['HEAT_202101'])
+heat_data_01.set_index('MGM_BLD_PK', inplace=True, drop=True)
+elec_data_01.set_index('MGM_BLD_PK', inplace=True, drop=True)
+gas_data_01.set_index('MGM_BLD_PK', inplace=True, drop=True)
+
+
+heat_data_02 = txt_read_to_df('C:/Users/user/Downloads/HEAT_2102_2106.txt')
+heat_data_02 = heat_data_02[['MGM_BLD_PK', 'HEAT_202102', 'HEAT_202103', 'HEAT_202104', 'HEAT_202105', 'HEAT_202106', 'UNIT_CD']]
+elec_data_02 = txt_read_to_df('C:/Users/user/Downloads/ELE_2102_2106.txt')
+elec_data_02 = elec_data_02[['MGM_BLD_PK', 'ELE_202102', 'ELE_202103', 'ELE_202104', 'ELE_202105', 'ELE_202106']]
+gas_data_02 = txt_read_to_df('C:/Users/user/Downloads/GAS_2102_2106.txt')
+print(gas_data_02.columns)
+gas_data_02 = gas_data_02[['MGM_BLD_PK', 'GAS_202102', 'GAS_202103', 'GAS_202104', 'GAS_202105', 'GAS_202106']]
+
+heat_data_02 = unify_energy_unit(heat_data_02, 'UNIT_CD', ['HEAT_202102', 'HEAT_202103', 'HEAT_202104', 'HEAT_202105', 'HEAT_202106'])
+heat_data_02.set_index('MGM_BLD_PK', inplace=True, drop=True)
+elec_data_02.set_index('MGM_BLD_PK', inplace=True, drop=True)
+gas_data_02.set_index('MGM_BLD_PK', inplace=True, drop=True)
+
+heat_data_03 = pd.read_excel('C:/Users/user/Downloads/서울_난방.xlsx', engine='openpyxl')
+print(heat_data_03)
+heat_data_03 = heat_data_03[['MGM_BLD_PK', 'HEAT_202107', 'HEAT_202108', 'HEAT_202109', 'UNIT_CD']]
+elec_data_03 = pd.read_excel('C:/Users/user/Downloads/서울_전기_2107_2109.xlsx', engine='openpyxl')
+elec_data_03 = elec_data_03[['MGM_BLD_PK', 'ELE_202107', 'ELE_202108', 'ELE_202109']]
+gas_data_03 = pd.read_excel('C:/Users/user/Downloads/서울_도시가스.xlsx', engine='openpyxl')
+gas_data_03 = gas_data_03[['MGM_BLD_PK', 'GAS_202107', 'GAS_202108', 'GAS_202109']]
+
+heat_data_03 = unify_energy_unit(heat_data_03, 'UNIT_CD', ['HEAT_202107', 'HEAT_202108', 'HEAT_202109'])
+heat_data_03.set_index('MGM_BLD_PK', inplace=True, drop=True)
+elec_data_03.set_index('MGM_BLD_PK', inplace=True, drop=True)
+gas_data_03.set_index('MGM_BLD_PK', inplace=True, drop=True)
+
+
+heat_data_04 = txt_read_to_df_spc('C:/Users/user/Downloads/난방_2104_2112.txt', ['HEAT_202104', 'HEAT_202105', 'HEAT_202106', 'HEAT_202107', 'HEAT_202108', 'HEAT_202109', 'HEAT_202110', 'HEAT_202111', 'HEAT_202112', 'MGM_BLD_PK', 'UNIT_CD'])
+print(heat_data_04.head())
+heat_data_04 = unify_energy_unit(heat_data_04, 'UNIT_CD', ['HEAT_202104', 'HEAT_202105', 'HEAT_202106', 'HEAT_202107', 'HEAT_202108', 'HEAT_202109', 'HEAT_202110', 'HEAT_202111', 'HEAT_202112'])
+elec_data_04 = txt_read_to_df_spc('C:/Users/user/Downloads/전기_2104_2112.txt', ['ELE_202104', 'ELE_202105', 'ELE_202106', 'ELE_202107', 'ELE_202108', 'ELE_202109', 'ELE_202110', 'ELE_202111', 'ELE_202112', 'MGM_BLD_PK', 'UNIT_CD'])
+elec_data_04 = elec_data_04[['MGM_BLD_PK', 'ELE_202104', 'ELE_202105', 'ELE_202106', 'ELE_202107', 'ELE_202108', 'ELE_202109', 'ELE_202110', 'ELE_202111', 'ELE_202112']]
+gas_data_04 = txt_read_to_df_spc('C:/Users/user/Downloads/도시가스_2104_2112.txt', ['GAS_202104', 'GAS_202105', 'GAS_202106', 'GAS_202107', 'GAS_202108', 'GAS_202109', 'GAS_202110', 'GAS_202111', 'GAS_202112', 'MGM_BLD_PK', 'UNIT_CD'])
+gas_data_04 = gas_data_04[['MGM_BLD_PK', 'GAS_202104', 'GAS_202105', 'GAS_202106', 'GAS_202107', 'GAS_202108', 'GAS_202109', 'GAS_202110', 'GAS_202111', 'GAS_202112']]
+
+heat_data_04 = heat_data_04[['MGM_BLD_PK', 'HEAT_202110', 'HEAT_202111', 'HEAT_202112']]
+elec_data_04 = elec_data_04[['MGM_BLD_PK', 'ELE_202110', 'ELE_202111', 'ELE_202112']]
+gas_data_04 = gas_data_04[['MGM_BLD_PK', 'GAS_202110', 'GAS_202111', 'GAS_202112']]
+
+heat_data_04.set_index('MGM_BLD_PK', inplace=True, drop=True)
+elec_data_04.set_index('MGM_BLD_PK', inplace=True, drop=True)
+gas_data_04.set_index('MGM_BLD_PK', inplace=True, drop=True)
+
+heat_res = heat_data_01.join(heat_data_02, how='outer', rsuffix='_02')
+heat_res = heat_res.join(heat_data_03, how='outer', rsuffix='_03')
+heat_res = heat_res.join(heat_data_04, how='outer', rsuffix='_04')
+
+elec_res = elec_data_01.join(elec_data_02, how='outer', rsuffix='_02')
+elec_res = elec_res.join(elec_data_03, how='outer', rsuffix='_03')
+elec_res = elec_res.join(elec_data_04, how='outer', rsuffix='_04')
+
+gas_res = gas_data_01.join(gas_data_02, how='outer', rsuffix='_02')
+gas_res = gas_res.join(gas_data_03, how='outer', rsuffix='_03')
+gas_res = gas_res.join(gas_data_04, how='outer', rsuffix='_04')
+
+print(heat_res)
+
+heat_res.to_csv('C:/Users/user/Downloads/heat_res.csv')
+elec_res.to_csv('C:/Users/user/Downloads/elec_res.csv')
+gas_res.to_csv('C:/Users/user/Downloads/gas_res.csv')
+
+raise IOError
 
 # unit_col의 단위를 기준으로 data_col에 해당하는 값들의 단위를 통일시킴
 
@@ -158,6 +269,8 @@ data_col_201701_202003 = ['HEAT_201701', 'HEAT_201702', 'HEAT_201703', 'HEAT_201
                           'HEAT_201901', 'HEAT_201902', 'HEAT_201903', 'HEAT_201904', 'HEAT_201905', 'HEAT_201906',
                           'HEAT_201907', 'HEAT_201908', 'HEAT_201909', 'HEAT_201910', 'HEAT_201911', 'HEAT_201912',
                           'HEAT_202001', 'HEAT_202002', 'HEAT_202003']
+
+
 
 #unify_energy_unit_for_file('HEAT_1701_2003.xlsx', data_col_201701_202003)
 unify_energy_unit_for_file('HEAT_2004_2109.xlsx', data_col_202004_202109, unit_col)'''
@@ -220,3 +333,6 @@ input_db(result, db_connection, 'gas')     # 수정해야 하는 주석
 # 메모용 덤프커맨드 (CMD - sql서버 bin디렉터리 내에서 실행)
 # mysqldump -u[username] -p[password] [database name] > [dumpfile name (.sql extension)]
 # 덤프로 복원시에는 < 로 반대방향 입력.
+
+
+
