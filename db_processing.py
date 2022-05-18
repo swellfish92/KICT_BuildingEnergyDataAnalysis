@@ -25,13 +25,71 @@ def load_sql(cursor, load_query):
     result = cursor.fetchall()
     return pd.DataFrame(result)
 
-def get_rawdata_all(energy_type_arr, year_arr):
+def get_coefficient_value(energy_type, calc_type):
+    # 계수계산값을 이곳에 저장토록 함. (추후 확장성을 위해)
+    # 지역난방의 경우 단위가 여러 개임... 불러올 때 체크해야! (1MJ = 0.277778 kWh, 1 Gcal = 1162.22 kWh)
 
+
+    coeff_dict = {
+        'EUI':{                     # EUI단위는 kWh/m^2으로 통일했음.
+            'ELEC':2.75,         # 원래 kWh라서 추가작업 필요 없음.
+            'GAS':0.30558,    # 1 MJ/m^2 = 0.2778 kWh/m2\^2, *1.1*0.2778 = *0.30558
+            'HEAT': 0.2022384 # 1 MJ/m^2 = 0.2778 kWh/m2\^2, *0.728*0.2778 = *0.2022384
+        },
+        'Carbon':{              # 탄소배출량 단위는 Kg으로 통일했음.
+            'ELEC': 0.4598,  #0.4594 t*CO2eq/MWh = 0.4594 kg*CO2eq/kWh    **for reference: https://tips.energy.or.kr/diagnosis/qna_view.do?no=1796
+            'GAS': 0.056236, #56,100 kg*CO2eq/TJ = 0.056100 Kg*CO2eq/MJ  (1MJ = 10^-6 TJ)
+            'HEAT': 0.02928 #34,771 kg*CO2eq/TJ = 0.034771 Kg*CO2eq/MJ  (1MJ = 10^-6 TJ)
+        },
+        'raw': {
+            'ELEC': 1,
+            'GAS': 1,
+            'HEAT': 1
+        },
+        'toe': {
+            # 한국부동산원 기준계수로 데이터를 수정했음. '환산계수.xlsx'을 참조.
+            'ELEC': 0.000086,
+            'GAS': 0.00002388459,    #에너지원별로 toe의 환산계수가 다른데, 이를 맨 마지막에 곱하는 것 같음. 기타가 1.000이니 일단은 단위환산만 해 둔다.
+            'HEAT': 0.00002388459    #(1toe = 10Gcal) 1MJ = 0.2778 kWh = 0.2778/1162.22 Gcal = 0.000239 Gcal = 0.0000239 toe
+        }
+    }
+    return coeff_dict[calc_type][energy_type]
+
+def col_arr_generator(energy_type_arr, year_arr, calc_type, div_type, monthly=False):
+
+    # monthly 값이 True일 경우 월별로 생성해줌
+    if monthly == True:
+
+        # month_arr 생성
+        month_arr = []
+        for i in range(12):
+            month_arr.append(str(i + 1).zfill(2))
+
+        col_name_arr = []
+        old_col_name_arr = []
+        for energy_type in energy_type_arr:
+            for year in year_arr:
+                for month in month_arr:
+                    col_name_arr.append(energy_type + '_' + calc_type + '_' + div_type + '_' + str(year) + month)
+                    old_col_name_arr.append(energy_type + '_' + str(year) + month)
+        return (col_name_arr, old_col_name_arr)
+
+    # monthly 값을 안 주면 연도별로 생성해줌
+    else:
+        col_name_arr = []
+        old_col_name_arr = []
+        for energy_type in energy_type_arr:
+            for year in year_arr:
+                col_name_arr.append(energy_type + '_' + calc_type + '_' + div_type + '_' + str(year))
+                old_col_name_arr.append(energy_type + '_' + str(year))
+        return (col_name_arr, old_col_name_arr)
+
+def get_rawdata_all(energy_type_arr, year_arr):
     # 1. 데이터 불러오기
     for energy_type in energy_type_arr:
         for year in year_arr:
 
-            query_string = 'SELECT * FROM ' + energy_type + '_' + year + ';'
+            query_string = 'SELECT * FROM ' + energy_type + '_' + str(year) + ';'
 
             if year_arr.index(year) == 0:
                 result_df = load_sql(cursor, query_string)
@@ -44,10 +102,57 @@ def get_rawdata_all(energy_type_arr, year_arr):
         if energy_type_arr.index(energy_type) == 0:
             final_result_df = result_df
         else:
-            final_result_df.join(result_df, how='outer')
+            final_result_df = final_result_df.join(result_df, how='outer')
+    return final_result_df
 
+# def get_attrdata_area_only():
+#
+
+def calc_energy_type(dataframe, energy_type_arr, year_arr, calc_type, div_type, monthly=False):
     # 2. 계산타입 (Raw/Carbon/TOE/EUI) 별로 데이터 연산
+    # 계산을 위한 데이터 컬럼명을 생성
+    data_col, old_data_col = col_arr_generator(energy_type_arr, year_arr, calc_type, div_type, monthly)
 
+    # 기존 old_data_col 이름을 data_col로 치환
+    temp_name_dict = {}
+    for iter in range(len(data_col)):
+        temp_name_dict[old_data_col[iter]] = data_col[iter]
+    # 치환한 딕셔너리로 컬럼명 변경
+    dataframe.rename(columns=temp_name_dict, inplace=True)
+
+    # 에너지타입별로 컬럼명을 나눔(계수가 다르기 때문)
+    data_col_arr = []
+    for energy_type in energy_type_arr:
+        temp_arr = []
+        for colname in data_col:
+            if energy_type in colname:
+                temp_arr.append(colname)
+        data_col_arr.append(temp_arr)
+
+    # 계산을 위한 계수를 배열로 저장
+    coeff_arr = []
+    for energy_type in energy_type_arr:
+        coeff_arr.append(get_coefficient_value(energy_type, calc_type))
+
+    # 컬럼명별로 계산해서 저장
+    # 직관성을 위해 배열 for문 구조를 유지
+    for energy_type in energy_type_arr:
+        iter = energy_type_arr.index(energy_type)
+        for colname in data_col_arr[iter]:
+            # NaN값 처리를 안해도 되지만, 일단 여기서 없애 둔다.
+            dataframe[colname] = dataframe[colname].fillna(0) * coeff_arr[iter]
+    return dataframe
+
+def get_energy_data_std(energy_type_arr, year_arr, calctype, divtype, monthly=False):
+    dataframe = get_rawdata_all(energy_type_arr, year_arr)
+    dataframe = calc_energy_type(dataframe, energy_type_arr, year_arr, calctype, divtype, monthly)
+    return dataframe
+
+df = get_rawdata_all(['GAS', 'ELEC'], [2017])
+print(df)
+df = calc_energy_type(df, ['GAS', 'ELEC'], [2017], 'Carbon', 'sum', True)
+print(df)
+raise IOError
 
 
 # def get_fulldata():
@@ -92,35 +197,7 @@ def get_energy_column_string(energy_sort, year):
     temp_result = temp_result[1:len(temp_result)]
     return temp_result
 
-def get_coefficient_string(energy_sort, calc_type):
-    # 계수계산값을 이곳에 저장토록 함. (추후 확장성을 위해)
-    # 지역난방의 경우 단위가 여러 개임... 불러올 때 체크해야! (1MJ = 0.277778 kWh, 1 Gcal = 1162.22 kWh)
 
-
-    coeff_dict = {
-        'EUI':{                     # EUI단위는 kWh/m^2으로 통일했음.
-            'ELEC':'*2.75',         # 원래 kWh라서 추가작업 필요 없음.
-            'GAS':'*0.30558',    # 1 MJ/m^2 = 0.2778 kWh/m2\^2, *1.1*0.2778 = *0.30558
-            'HEAT': '*0.2022384' # 1 MJ/m^2 = 0.2778 kWh/m2\^2, *0.728*0.2778 = *0.2022384
-        },
-        'Carbon':{              # 탄소배출량 단위는 Kg으로 통일했음.
-            'ELEC': '*0.4598',  #0.4594 t*CO2eq/MWh = 0.4594 kg*CO2eq/kWh    **for reference: https://tips.energy.or.kr/diagnosis/qna_view.do?no=1796
-            'GAS': '*0.056236', #56,100 kg*CO2eq/TJ = 0.056100 Kg*CO2eq/MJ  (1MJ = 10^-6 TJ)
-            'HEAT': '*0.02928' #34,771 kg*CO2eq/TJ = 0.034771 Kg*CO2eq/MJ  (1MJ = 10^-6 TJ)
-        },
-        'raw': {
-            'ELEC': '*1',
-            'GAS': '*1',
-            'HEAT': '*1'
-        },
-        'toe': {
-            # 한국부동산원 기준계수로 데이터를 수정했음. '환산계수.xlsx'을 참조.
-            'ELEC': '*0.000086',
-            'GAS': '*0.00002388459',    #에너지원별로 toe의 환산계수가 다른데, 이를 맨 마지막에 곱하는 것 같음. 기타가 1.000이니 일단은 단위환산만 해 둔다.
-            'HEAT': '*0.00002388459'    #(1toe = 10Gcal) 1MJ = 0.2778 kWh = 0.2778/1162.22 Gcal = 0.000239 Gcal = 0.0000239 toe
-        }
-    }
-    return coeff_dict[calc_type][energy_sort]
 
 def get_energy_data_col(dataframe):
     # 에너지사용량에 해당하는 칼럼값을 뽑아내는 메서드

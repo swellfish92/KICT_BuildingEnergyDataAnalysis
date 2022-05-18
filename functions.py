@@ -12,6 +12,10 @@ font_path = "C:/Windows/Fonts/NGULIM.TTF"
 font = font_manager.FontProperties(fname=font_path).get_name()
 rc('font', family=font)
 
+
+
+
+
 # 공통부를 채우기 위한 함수(사용승인일 및 사용용도)
 # df_1에 null이 있을 경우 df_2에서 가져와서 채움. null이 없으면 기본적으로 앞의 것을 신뢰함.
 def fill_null(df_1, df_2, col_arr):

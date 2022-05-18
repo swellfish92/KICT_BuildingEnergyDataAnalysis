@@ -24,6 +24,10 @@ energy_db_another = pymysql.connect(
     charset = 'utf8'
 )
 
+cursor = energy_db.cursor(pymysql.cursors.DictCursor)
+
+
+
 # 이 변수값은 read_data_from_excel의 인덱스 (칼럼 명) 변경을 위한 것임.
 attrdata_db_matrix = {
     '건축물_유형':'BLD_TYPE_GB_CD',
@@ -173,12 +177,92 @@ def txt_read_to_df_spc(filedir, header):
     data = pd.DataFrame(temp_arr, columns=header)
     return data
 
+def load_sql(cursor, load_query):
+    cursor.execute(load_query)
+    result = cursor.fetchall()
+    return pd.DataFrame(result)
 
-data = pd.read_csv('C:/Users/user/Downloads/elec_res.csv')
+
+# 면적입력 코드
+# 건축물대장, 에너지데이터(부동산원) 데이터를 끌어와서 Area DB를 만든다.
+# DB구조는 PK단에서 이루어지며, 이 내용은 건축물대장 및 부동산원 업데이트시 초기화시킬 수 있도록 한다.
+def build_area_database(cursor):
+    # 1. 에너지데이터(부동산원) 정보를 취득
+    query_string = 'select MGM_BLD_PK, TOTAREA from elec_attribute'
+    elec_attr_res = load_sql(cursor, query_string)
+    query_string = 'select MGM_BLD_PK, TOTAREA from gas_attribute'
+    gas_attr_res = load_sql(cursor, query_string)
+    query_string = 'select MGM_BLD_PK, TOTAREA from heat_attribute'
+    heat_attr_res = load_sql(cursor, query_string)
+    elec_attr_res.set_index('MGM_BLD_PK', drop=True, inplace=True)
+    gas_attr_res.set_index('MGM_BLD_PK', drop=True, inplace=True)
+    heat_attr_res.set_index('MGM_BLD_PK', drop=True, inplace=True)
+    print(elec_attr_res)
+    print(gas_attr_res)
+    energy_db_res = fill_null(elec_attr_res, gas_attr_res, ['MGM_BLD_PK', 'totArea'])
+    energy_db_res = fill_null(energy_db_res, heat_attr_res, ['MGM_BLD_PK', 'totArea'])
+    energy_db_res.rename(columns={'TOTAREA':'TOTAREA_energydb', 'MGM_BLD_PK':'mgmBldrgstPk'}, inplace=True)
+
+    # 2. 건축물대장 정보를 취득
+    # 2-1. 총괄표제부 면적 취득
+    query_string = 'select mgmBldrgstPk, totArea from building_legister_recaptitle_seoul'
+    recaptitle_res = load_sql(cursor, query_string)
+    recaptitle_res.rename(columns={'totArea':'TOTAREA_recaptitle'}, inplace=True)
+    recaptitle_res.set_index('mgmBldrgstPk', drop=True, inplace=True)
+
+    # 2-2. 표제부 면적 취득
+    query_string = 'select mgmBldrgstPk, totArea from building_legister_title_seoul'
+    title_res = load_sql(cursor, query_string)
+    title_res.rename(columns={'totArea': 'TOTAREA_title'}, inplace=True)
+    title_res.set_index('mgmBldrgstPk', drop=True, inplace=True)
+
+    # 2-3. 층별면적 취득
+    # PK가 같은 것들의 층별면적을 합함
+    query_string = 'select mgmBldrgstPk, sum(area) from building_legister_floordata_seoul group by mgmBldrgstPk;'
+    floor_res = load_sql(cursor, query_string)
+    floor_res.rename(columns={'sum(area)':'TOTAREA_floorsum'}, inplace=True)
+    floor_res.set_index('mgmBldrgstPk', drop=True, inplace=True)
+
+    # 3. 병합
+    merged_res = energy_db_res.join(recaptitle_res, how='outer')
+    merged_res = merged_res.join(title_res, how='outer')
+    merged_res = merged_res.join(floor_res, how='outer')
+
+    # 4. 조정면적(TOTAREA_custom)과 선택 컬럼 만들기
+    merged_res['TOTAREA_custom'] = ''
+    merged_res['TOTAREA_selector'] = ''
+
+    # 결과 데이터프레임을 db에 저장한다.
+    # 저장에 앞선 기본값 설정
+    db_connection_str = 'mysql+pymysql://root:atdt01410@127.0.0.1/energy_data'
+    db_connection = sqlalchemy.create_engine(db_connection_str)
+    data_type_matrix = {
+        'mgmBldrgstPk':sqlalchemy.types.VARCHAR(33),
+        'TOTAREA_energydb':sqlalchemy.types.VARCHAR(80),
+        'TOTAREA_recaptitle':sqlalchemy.types.FLOAT,
+        'TOTAREA_title':sqlalchemy.types.FLOAT,
+        'TOTAREA_floorsum':sqlalchemy.types.FLOAT,
+        'TOTAREA_custom':sqlalchemy.types.FLOAT,
+        'TOTAREA_selector':sqlalchemy.types.VARCHAR(24),
+    }
+
+    print('connected')
+
+    def input_db(dataframe, connection, table_name):
+        dataframe.to_sql(name=table_name, con=connection, if_exists='replace', index=True, dtype=data_type_matrix, method='multi')
+        print('Data saved to DB with table name: ' + str(table_name))
+
+    input_db(result, db_connection, 'area_data')     # 수정해야 하는 주석
+
+build_area_database(cursor)
+raise IOError
+
+
+data = pd.read_csv('C:/Users/Swellfish/Downloads/2021_res/gas_res.csv')
 
 # 결과 데이터프레임을 db에 저장한다.
 # 저장에 앞선 기본값 설정
-db_connection_str = 'mysql+pymysql://swellfish_remote:atdt01410@222.236.133.141/energy_data'
+db_connection_str = 'mysql+pymysql://root:atdt01410@127.0.0.1/energy_data'
 db_connection = sqlalchemy.create_engine(db_connection_str)
 data_type_matrix = {
     'MGM_BLD_PK':sqlalchemy.types.VARCHAR(33)
@@ -187,10 +271,10 @@ data_type_matrix = {
 print('connected')
 
 def input_db(dataframe, connection, table_name):
-    dataframe.to_sql(name=table_name, con=connection, if_exists='replace', index=True, dtype=data_type_matrix, method='multi')
+    dataframe.to_sql(name=table_name, con=connection, if_exists='replace', index=True, dtype=data_type_matrix)
     print('Data saved to DB with table name: ' + str(table_name))
 
-input_db(data, db_connection, 'elec_2021')     # 수정해야 하는 주석
+input_db(data, db_connection, 'gas_2021')     # 수정해야 하는 주석
 
 raise IOError
 
