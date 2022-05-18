@@ -25,18 +25,30 @@ def load_sql(cursor, load_query):
     result = cursor.fetchall()
     return pd.DataFrame(result)
 
-# 공통부를 채우기 위한 함수(사용승인일 및 사용용도)
-# df_1에 null이 있을 경우 df_2에서 가져와서 채움. null이 없으면 기본적으로 앞의 것을 신뢰함.
-def fill_null(df_1, df_2, col_arr):
-    fill_null_condition = lambda s1, s2: s2 if pd.isna(s1) is True else s1
-    # print(col_arr)
-    # print(df_1)
-    # print(df_1.columns.tolist())
-    # print(df_2)
-    # print(df_2.columns.tolist())
-    for index in col_arr:
-        df_1[index] = df_1[index].combine(df_2[index], fill_null_condition)
-    return df_1
+def get_rawdata_all(energy_type_arr, year_arr):
+
+    # 1. 데이터 불러오기
+    for energy_type in energy_type_arr:
+        for year in year_arr:
+
+            query_string = 'SELECT * FROM ' + energy_type + '_' + year + ';'
+
+            if year_arr.index(year) == 0:
+                result_df = load_sql(cursor, query_string)
+                result_df.set_index('MGM_BLD_PK', drop=True, inplace=True)
+            else:
+                temp_df = load_sql(cursor, query_string)
+                temp_df.set_index('MGM_BLD_PK', drop=True, inplace=True)
+                result_df = result_df.join(temp_df, how='outer')
+
+        if energy_type_arr.index(energy_type) == 0:
+            final_result_df = result_df
+        else:
+            final_result_df.join(result_df, how='outer')
+
+    # 2. 계산타입 (Raw/Carbon/TOE/EUI) 별로 데이터 연산
+
+
 
 # def get_fulldata():
 #     gas_data = load_sql(cursor, sql_gas)

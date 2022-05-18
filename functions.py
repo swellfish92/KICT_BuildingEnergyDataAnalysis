@@ -12,9 +12,18 @@ font_path = "C:/Windows/Fonts/NGULIM.TTF"
 font = font_manager.FontProperties(fname=font_path).get_name()
 rc('font', family=font)
 
-
-
-
+# 공통부를 채우기 위한 함수(사용승인일 및 사용용도)
+# df_1에 null이 있을 경우 df_2에서 가져와서 채움. null이 없으면 기본적으로 앞의 것을 신뢰함.
+def fill_null(df_1, df_2, col_arr):
+    fill_null_condition = lambda s1, s2: s2 if pd.isna(s1) is True else s1
+    # print(col_arr)
+    # print(df_1)
+    # print(df_1.columns.tolist())
+    # print(df_2)
+    # print(df_2.columns.tolist())
+    for index in col_arr:
+        df_1[index] = df_1[index].combine(df_2[index], fill_null_condition)
+    return df_1
 
 # 중복을 제거한 배열을 반환함
 def remove_duplicated(list):

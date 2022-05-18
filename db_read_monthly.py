@@ -133,6 +133,9 @@ def get_year_data_monthly_by_pk(pk_code_arr, energy_sort, year_arr, calc_type, d
 
     return result
 
+
+
+
 def get_attr_data_only(energy_sort):
     # 속성정보 데이터를 로드
     query_for_attr = "SELECT * FROM " + str(energy_sort) + '_attribute'
@@ -169,6 +172,23 @@ def read_and_export_excel(calc_type, data_type):
     result.to_excel('result(' + str(calc_type) + '_' + str(data_type) + ')_v6_20220425.xlsx')
 
     print('Finished!')
+
+pk_code_arr = ['11110-100183537', '11110-490', '11110-647', '11140-1241', '11140-176', '11170-171', '11200-1225', '11215-100225581', '11215-23070', '11230-34287', '11230-531', '11260-100192650', '11260-25891', '11305-509', '11320-280', '11350-14660', '11350-503', '11350-9982', '11380-100290794', '11380-359', '11470-100186127', '11470-100191796', '11470-100229028', '11500-100318672', '11530-5576', '11560-1390', '11560-507', '11590-100194692', '11590-14698', '11650-18446', '11680-10414', '11680-410', '11680-74', '11710-228', '11710-485', '11740-435', '11740-4945', '11740-544']
+energy_sort_arr = ['ELEC', 'GAS', 'HEAT']
+year_arr = ['2014', '2015', '2016', '2017', '2018', '2019', '2020']
+calc_type = 'Carbon'
+data_type = 'raw'
+
+elec_data = get_year_data_monthly_by_pk(pk_code_arr, 'ELEC', year_arr, calc_type, data_type, include_attr = False)
+gas_data = get_year_data_monthly_by_pk(pk_code_arr, 'GAS', year_arr, calc_type, data_type, include_attr = False)
+heat_data = get_year_data_monthly_by_pk(pk_code_arr, 'HEAT', year_arr, calc_type, data_type, include_attr = False)
+
+result = elec_data.join(gas_data, how='left')
+result = result.join(heat_data, how='left')
+print(result)
+result.to_csv('병원목록_면적20000이상_월별탄소량.csv')
+
+raise IOError
 
 # 전기랑 가스 파일을 불러옴
 elec_data_recap = pd.read_csv('C:/Users/user/Downloads/대학목록_총괄표제부/대학목록_Carbon_ELEC.csv')
